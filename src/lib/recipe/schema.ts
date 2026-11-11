@@ -999,6 +999,11 @@ export const RecipeSchema = z.preprocess(
     samplerate: "sampleRate",
     output: "master",
     mix: "master",
+    pitchShift: "transpose",
+    semitones: "transpose",
+    transposicao: "transpose",
+    playbackRate: "speed",
+    velocidade: "speed",
   }),
   z.strictObject({
     $schema: z.string().optional(),
@@ -1020,6 +1025,10 @@ export const RecipeSchema = z.preprocess(
     duration: optNum(0.05, MAX_DURATION),
     seed: num(1, 0, 2 ** 31).transform((v) => Math.floor(v)),
     bpm: optNum(20, 400),
+    /** Semitons somados a todas as notas (não afeta bateria nem ruído). */
+    transpose: num(0, -48, 48),
+    /** Multiplicador de andamento: 2 = duas vezes mais rápido, sem mudar a afinação. */
+    speed: num(1, 0.25, 4),
     master: Master.default({ gain: 1, normalize: true, normalizeTo: -1, fadeIn: 0, fadeOut: 0.01 }),
     layers: z
       .array(LayerSchema, { error: 'Esperava uma lista de camadas em "layers"' })

@@ -11,6 +11,8 @@ type SettingsState = {
   autoPlay: boolean
   defaultFormat: string
   sidebarCollapsed: boolean
+  /** pedidos de ajuste/correção levam junto a referência do formato */
+  includeFormat: boolean
   set: (patch: Partial<Omit<SettingsState, "set">>) => void
 }
 
@@ -23,6 +25,7 @@ export const useSettings = create<SettingsState>()(
       autoPlay: true,
       defaultFormat: "wav16",
       sidebarCollapsed: false,
+      includeFormat: true,
       set: (patch) => set(patch),
     }),
     { name: "sonora-settings", version: 1 },

@@ -10,7 +10,7 @@ import { player } from "@/lib/audio/player"
 import { cn } from "@/lib/utils"
 import { useSettings } from "@/stores/settings"
 import { useHistory } from "@/stores/history"
-import { copyPrompt, generateFromDraft, openHistoryItem, useStudio, type Step } from "@/stores/studio"
+import { copyPrompt, generateFromDraft, importFromHash, openHistoryItem, useStudio, type Step } from "@/stores/studio"
 import { commands, useUi } from "@/stores/ui"
 import { CommandPalette } from "./command-palette"
 import { Header } from "./header"
@@ -53,6 +53,14 @@ export function AppShell() {
     commands.toggleSidebar = toggleSidebar
   }, [toggleSidebar])
 
+  // Receita recebida por link (#r=...)
+  useEffect(() => {
+    importFromHash()
+    const onHash = () => importFromHash()
+    window.addEventListener("hashchange", onHash)
+    return () => window.removeEventListener("hashchange", onHash)
+  }, [])
+
   // Reabre o último som ouvido (sem tocar), para o player já estar pronto.
   useEffect(() => {
     const { lastId, current } = useStudio.getState()
@@ -92,12 +100,22 @@ export function AppShell() {
         useStudio.getState().setStep(Number(e.key) as Step)
       } else if (!isTyping(e) && !mod && !e.altKey) {
         if (e.key === " " || e.code === "Space") {
-          const cur = useStudio.getState().current
-          const key = player.key ?? cur?.id
-          if (!key) return
-          e.preventDefault()
-          if (player.key === key) void player.toggle(key)
-          else if (cur) void player.play(cur.id, cur.result, 0)
+          const st = useStudio.getState()
+          const cur = st.current
+          if (player.playing) {
+            e.preventDefault()
+            player.pause()
+          } else if (st.step === 3 && cur) {
+            e.preventDefault()
+            if (player.key === cur.id) void player.toggle(cur.id, cur.result)
+            else void player.play(cur.id, cur.result, 0)
+          } else if (player.key) {
+            e.preventDefault()
+            void player.toggle(player.key)
+          } else if (cur) {
+            e.preventDefault()
+            void player.play(cur.id, cur.result, 0)
+          }
         } else if (e.key === "?") {
           ui.set({ shortcutsOpen: true })
         } else if (k === "escape" && player.playing) {

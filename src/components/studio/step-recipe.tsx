@@ -11,6 +11,7 @@ import {
   EraserIcon,
   FileUpIcon,
   Gamepad2Icon,
+  HeadphonesIcon,
   MonitorSmartphoneIcon,
   MusicIcon,
   PlayIcon,
@@ -33,11 +34,12 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatBytes } from "@/lib/audio/export"
+import { player, usePlayer } from "@/lib/audio/player"
 import { isMac, readClipboard } from "@/lib/helpers"
 import { EXAMPLES, exampleJson, type ExampleCategory } from "@/lib/recipe/examples"
 import { parseRecipeText, prettify, type Diagnostic } from "@/lib/recipe/parse"
 import { cn } from "@/lib/utils"
-import { generateFromDraft, useStudio } from "@/stores/studio"
+import { audition, copyFixPrompt, generateFromDraft, PREVIEW_KEY, useStudio } from "@/stores/studio"
 import { EqBars, MotionButton } from "./fx"
 import { RecipeEditor, type RecipeEditorHandle } from "./recipe-editor"
 import { DiagnosticList, RecipePreview } from "./recipe-preview"
@@ -55,8 +57,14 @@ function ExamplesMenu({ onPick }: { onPick: (json: string, name: string) => void
     for (const e of EXAMPLES) map.set(e.category, [...(map.get(e.category) ?? []), e])
     return [...map.entries()]
   }, [])
+  const playingKey = usePlayer((p) => (p.playing ? p.key : null))
+  const loadingKey = useStudio((st) => st.auditioning)
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open && player.key?.startsWith("example:")) player.stop()
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-1.5">
           <BookOpenIcon />
@@ -64,7 +72,7 @@ function ExamplesMenu({ onPick }: { onPick: (json: string, name: string) => void
           <ChevronDownIcon className="size-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-[70dvh] w-72 overflow-y-auto">
+      <DropdownMenuContent align="start" className="max-h-[70dvh] w-80 overflow-y-auto">
         {groups.map(([cat, list], gi) => {
           const Icon = CATEGORY_ICON[cat]
           return (
@@ -74,12 +82,35 @@ function ExamplesMenu({ onPick }: { onPick: (json: string, name: string) => void
                 <Icon className="size-3.5" />
                 {cat}
               </DropdownMenuLabel>
-              {list.map((e) => (
-                <DropdownMenuItem key={e.id} onSelect={() => onPick(exampleJson(e), String(e.recipe.name))} className="flex-col items-start gap-0">
-                  <span className="font-medium">{String(e.recipe.name)}</span>
-                  <span className="line-clamp-1 text-xs text-muted-foreground">{String(e.recipe.description ?? "")}</span>
-                </DropdownMenuItem>
-              ))}
+              {list.map((e) => {
+                const key = `example:${e.id}`
+                const isPlaying = playingKey === key
+                return (
+                  <DropdownMenuItem key={e.id} onSelect={() => onPick(exampleJson(e), String(e.recipe.name))} className="gap-2">
+                    <button
+                      type="button"
+                      aria-label={isPlaying ? `Parar ${String(e.recipe.name)}` : `Ouvir ${String(e.recipe.name)}`}
+                      onPointerDown={(ev) => ev.stopPropagation()}
+                      onPointerUp={(ev) => ev.stopPropagation()}
+                      onClick={(ev) => {
+                        ev.preventDefault()
+                        ev.stopPropagation()
+                        void audition(key, exampleJson(e))
+                      }}
+                      className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-full border transition-colors hover:border-primary/60 hover:text-primary",
+                        isPlaying && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
+                      )}
+                    >
+                      {isPlaying || loadingKey === key ? <EqBars className="h-3" bars={3} /> : <PlayIcon className="size-3 translate-x-px fill-current" />}
+                    </button>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-medium">{String(e.recipe.name)}</span>
+                      <span className="line-clamp-1 text-xs text-muted-foreground">{String(e.recipe.description ?? "")}</span>
+                    </span>
+                  </DropdownMenuItem>
+                )
+              })}
             </DropdownMenuGroup>
           )
         })}
@@ -141,6 +172,10 @@ export function StepRecipe() {
     }
     loadText(await file.text(), `“${file.name}” carregado`)
   }
+
+  const previewPlaying = usePlayer((p) => p.playing && p.key === PREVIEW_KEY)
+  const previewLoading = useStudio((st) => st.auditioning === PREVIEW_KEY)
+  const preview = () => void audition(PREVIEW_KEY, draft)
 
   const jump = (d: Diagnostic) => editor.current?.jumpTo(d.from, d.to)
   const submit = () => {
@@ -234,8 +269,27 @@ export function StepRecipe() {
             </TooltipTrigger>
             <TooltipContent>Limpar editor</TooltipContent>
           </Tooltip>
-          <div className="ml-auto lg:hidden">
-            <GenerateButton valid={valid} count={count} generating={generating} onClick={submit} compact />
+          <div className="ml-auto flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={previewPlaying ? "secondary" : "ghost"}
+                  size="sm"
+                  disabled={!valid}
+                  onClick={preview}
+                  className={cn(previewPlaying && "text-primary")}
+                >
+                  {previewPlaying || previewLoading ? <EqBars className="h-3" bars={3} /> : <HeadphonesIcon />}
+                  <span className="hidden sm:inline">{previewPlaying ? "Parar" : "Prévia"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Ouvir sem salvar no histórico <Kbd className="ml-1">Alt Enter</Kbd>
+              </TooltipContent>
+            </Tooltip>
+            <div className="lg:hidden">
+              <GenerateButton valid={valid} count={count} generating={generating} onClick={submit} compact />
+            </div>
           </div>
         </div>
 
@@ -246,6 +300,7 @@ export function StepRecipe() {
             onChange={setDraft}
             diagnostics={diagnostics}
             onSubmit={submit}
+            onPreview={preview}
             onCursor={(line, col) => setCursor({ line, col })}
             onCleanPaste={() => toast.success("Resposta da IA limpa", { description: "Extraí só o JSON e formatei para você." })}
           />
@@ -317,7 +372,12 @@ export function StepRecipe() {
           </p>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin lg:pr-1">
-          <RecipePreview result={result} empty={empty} onJump={jump} />
+          <RecipePreview
+            result={result}
+            empty={empty}
+            onJump={jump}
+            onCopyFix={() => result && !result.ok && void copyFixPrompt(draft, result.errors)}
+          />
         </div>
         {result && !result.ok && result.errors.length > 0 && (
           <div className="lg:hidden">

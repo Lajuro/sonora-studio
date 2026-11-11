@@ -34,7 +34,9 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
     const candidates = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
     return candidates.find((c) => duration / c <= 8) ?? 10
   }, [duration])
-  const rulerMarks = Array.from({ length: Math.floor(duration / rulerStep) + 1 }, (_, i) => i * rulerStep)
+  const rulerMarks = Array.from({ length: Math.floor(duration / rulerStep) + 1 }, (_, i) => i * rulerStep).filter(
+    (m) => m / scale < 0.96,
+  )
 
   return (
     <div className="rounded-2xl border bg-card/70 p-4">
@@ -56,8 +58,15 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
       <div className="relative">
         {/* régua */}
         <div className="relative ml-[148px] h-5 border-b border-dashed sm:ml-[188px]">
-          {rulerMarks.map((m) => (
-            <span key={m} className="absolute -translate-x-1/2 font-mono text-[10px] text-muted-foreground tabular" style={{ left: pct(m) }}>
+          {rulerMarks.map((m, i) => (
+            <span
+              key={m}
+              className={cn(
+                "absolute -translate-x-1/2 font-mono text-[10px] whitespace-nowrap text-muted-foreground tabular",
+                i % 2 === 1 && "hidden sm:inline",
+              )}
+              style={{ left: pct(m) }}
+            >
               {m === 0 ? "0" : `${Number(m.toFixed(2)).toLocaleString("pt-BR")} s`}
             </span>
           ))}

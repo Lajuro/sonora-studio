@@ -9,6 +9,7 @@ import {
 } from "jsonc-parser"
 import type { $ZodIssue } from "zod/v4/core"
 import { RecipeSchema, type Recipe } from "./schema"
+import { applyGlobals } from "./transform"
 
 export type Severity = "error" | "warning"
 
@@ -194,7 +195,7 @@ export function parseRecipeText(text: string): ParseResult {
     }
 
     if (result.success) {
-      recipes.push(result.data)
+      recipes.push(applyGlobals(result.data))
       raws.push(raw)
     } else {
       for (const issue of dedupe(result.error.issues)) {

@@ -1,14 +1,15 @@
 "use client"
 
 import { AnimatePresence, motion } from "motion/react"
-import { CircleAlertIcon, ClockIcon, FileJson2Icon, LayersIcon, TriangleAlertIcon } from "lucide-react"
-import { useMemo } from "react"
+import { CircleAlertIcon, ClockIcon, FileJson2Icon, LayersIcon, TriangleAlertIcon, WandSparklesIcon } from "lucide-react"
+import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { computeDuration, computeSpans } from "@/lib/audio/engine"
 import { formatDuration } from "@/lib/helpers"
 import type { Diagnostic, ParseResult } from "@/lib/recipe/parse"
 import type { Recipe } from "@/lib/recipe/schema"
 import { cn } from "@/lib/utils"
+import { CopyMorph, MotionButton } from "./fx"
 import { LAYER_META } from "./layer-meta"
 
 export function DiagnosticList({
@@ -146,14 +147,36 @@ function WarningBox({ items, onJump }: { items: Diagnostic[]; onJump: (d: Diagno
   )
 }
 
+function FixButton({ onCopyFix }: { onCopyFix: () => void }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <MotionButton
+      variant="outline"
+      size="sm"
+      whileTap={{ scale: 0.96 }}
+      className="w-full gap-2"
+      onClick={() => {
+        onCopyFix()
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1600)
+      }}
+    >
+      {copied ? <CopyMorph copied /> : <WandSparklesIcon />}
+      {copied ? "Copiado!" : "Pedir correção para a IA"}
+    </MotionButton>
+  )
+}
+
 export function RecipePreview({
   result,
   empty,
   onJump,
+  onCopyFix,
 }: {
   result: ParseResult | null
   empty: boolean
   onJump: (d: Diagnostic) => void
+  onCopyFix?: () => void
 }) {
   if (empty || !result) {
     return (
@@ -180,6 +203,14 @@ export function RecipePreview({
             {result.errors.length} {result.errors.length === 1 ? "problema encontrado" : "problemas encontrados"}
           </p>
           <DiagnosticList items={result.errors} onJump={onJump} />
+          {onCopyFix && (
+            <div className="mt-2 border-t border-destructive/20 px-2 pt-3">
+              <FixButton onCopyFix={onCopyFix} />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Copia um pedido com os erros e a receita. Cole na IA e traga a versão corrigida.
+              </p>
+            </div>
+          )}
         </div>
         {result.warnings.length > 0 && <WarningBox items={result.warnings} onJump={onJump} />}
       </div>

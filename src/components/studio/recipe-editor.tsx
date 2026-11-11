@@ -116,22 +116,25 @@ type Props = {
   onChange: (v: string) => void
   diagnostics: Diagnostic[]
   onSubmit: () => void
+  onPreview?: () => void
   onCursor?: (line: number, col: number) => void
   onCleanPaste?: () => void
 }
 
 export const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(function RecipeEditor(
-  { value, onChange, diagnostics, onSubmit, onCursor, onCleanPaste },
+  { value, onChange, diagnostics, onSubmit, onPreview, onCursor, onCleanPaste },
   ref,
 ) {
   const cm = useRef<ReactCodeMirrorRef>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const submitRef = useRef(onSubmit)
   const cleanRef = useRef(onCleanPaste)
+  const previewRef = useRef(onPreview)
   useEffect(() => {
     submitRef.current = onSubmit
     cleanRef.current = onCleanPaste
-  }, [onSubmit, onCleanPaste])
+    previewRef.current = onPreview
+  }, [onSubmit, onCleanPaste, onPreview])
 
   useImperativeHandle(ref, () => ({
     jumpTo: (from, to) => {
@@ -160,6 +163,13 @@ export const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(function Recip
             key: "Mod-Enter",
             run: () => {
               submitRef.current()
+              return true
+            },
+          },
+          {
+            key: "Alt-Enter",
+            run: () => {
+              previewRef.current?.()
               return true
             },
           },

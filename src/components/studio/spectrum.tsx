@@ -30,6 +30,11 @@ export function Spectrum({ active, className }: { active: boolean; className?: s
     const draw = () => {
       const w = c.clientWidth
       const h = c.clientHeight
+      // escondido (ex.: no celular): nada para desenhar, mas continua observando
+      if (w < BANDS * 2 || h < 4) {
+        raf = requestAnimationFrame(draw)
+        return
+      }
       const dpr = window.devicePixelRatio || 1
       if (c.width !== Math.round(w * dpr)) c.width = Math.round(w * dpr)
       if (c.height !== Math.round(h * dpr)) c.height = Math.round(h * dpr)
@@ -72,7 +77,7 @@ export function Spectrum({ active, className }: { active: boolean; className?: s
         ctx.fillStyle = live || lv > 0.01 ? grad : muted
         ctx.globalAlpha = live || lv > 0.01 ? 0.95 : 0.25
         ctx.beginPath()
-        ctx.roundRect(x, h - bh, bw, bh, Math.min(2, bw / 2))
+        ctx.roundRect(x, h - bh, bw, bh, Math.max(0, Math.min(2, bw / 2)))
         ctx.fill()
         if (peaks[b] > 0.02) {
           ctx.globalAlpha = 0.8

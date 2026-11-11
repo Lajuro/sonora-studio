@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
@@ -16,6 +17,8 @@ export type HistoryItem = {
   layers: number
   peaks: number[]
   favorite: boolean
+  /** sons gerados juntos (variações do mesmo pedido) compartilham o mesmo lote */
+  batch?: string
 }
 
 type HistoryState = {
@@ -30,6 +33,25 @@ type HistoryState = {
 }
 
 const MAX_ITEMS = 500
+
+/** localStorage que avisa (uma vez) em vez de quebrar o app quando o espaço acaba. */
+let warnedQuota = false
+const safeStorage: Pick<Storage, "getItem" | "setItem" | "removeItem"> = {
+  getItem: (key) => localStorage.getItem(key),
+  removeItem: (key) => localStorage.removeItem(key),
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      if (warnedQuota) return
+      warnedQuota = true
+      toast.error("O armazenamento do navegador está cheio", {
+        description: "Os sons novos podem não ficar salvos. Exporte um backup e apague itens antigos do histórico.",
+        duration: 12000,
+      })
+    }
+  },
+}
 
 export const useHistory = create<HistoryState>()(
   persist(
@@ -64,7 +86,7 @@ export const useHistory = create<HistoryState>()(
     {
       name: "sonora-history",
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeStorage),
     },
   ),
 )

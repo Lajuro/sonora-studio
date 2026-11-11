@@ -18,6 +18,8 @@ const RECIPE_KEYS: KeyDoc[] = [
   ["duration", "Duração total fixa (s)"],
   ["bpm", "Tempo padrão das sequências"],
   ["seed", "Semente da aleatoriedade"],
+  ["transpose", "Semitons somados às notas"],
+  ["speed", "Andamento (2 = dobro)"],
   ["sampleRate", "Taxa de amostragem (44100)"],
   ["channels", "1 = mono, 2 = estéreo"],
 ]

@@ -7,6 +7,7 @@ import {
   BracesIcon,
   CopyIcon,
   KeyboardIcon,
+  Link2Icon,
   MoonIcon,
   PanelLeftIcon,
   PlayIcon,
@@ -32,7 +33,7 @@ import { player } from "@/lib/audio/player"
 import { formatDuration, isMac } from "@/lib/helpers"
 import { EXAMPLES, exampleJson } from "@/lib/recipe/examples"
 import { useHistory } from "@/stores/history"
-import { copyPrompt, generateFromDraft, openHistoryItem, useStudio } from "@/stores/studio"
+import { copyPrompt, copyShareLink, generateFromDraft, openHistoryItem, useStudio } from "@/stores/studio"
 import { commands, useUi } from "@/stores/ui"
 import { MiniWave } from "./mini-wave"
 
@@ -41,6 +42,7 @@ export function CommandPalette() {
   const set = useUi((s) => s.set)
   const items = useHistory((s) => s.items)
   const hasDraft = useStudio((s) => Boolean(s.draft.trim()))
+  const currentJson = useStudio((s) => s.current?.json)
   const { resolvedTheme, setTheme } = useTheme()
   const mod = isMac() ? "⌘" : "Ctrl"
 
@@ -90,6 +92,12 @@ export function CommandPalette() {
               Ir para o player
               <CommandShortcut>Alt 3</CommandShortcut>
             </CommandItem>
+            {currentJson && (
+              <CommandItem onSelect={() => run(() => void copyShareLink(currentJson))}>
+                <Link2Icon />
+                Copiar link do som atual
+              </CommandItem>
+            )}
             <CommandItem onSelect={() => run(() => player.stop())}>
               <SquareIcon />
               Parar reprodução
@@ -135,7 +143,11 @@ export function CommandPalette() {
                     {item.favorite ? <StarIcon className="fill-warning text-warning" /> : <AudioLinesIcon />}
                     <span className="truncate">{item.name}</span>
                     <CommandShortcut className="flex items-center gap-3 tracking-normal tabular">
-                      <MiniWave peaks={item.peaks} style={{ width: 64, height: 14 }} className="text-muted-foreground" />
+                      <MiniWave
+                        peaks={item.peaks}
+                        style={{ width: 64, height: 14 }}
+                        className="text-muted-foreground"
+                      />
                       <span className="w-12 text-right">{formatDuration(item.duration)}</span>
                     </CommandShortcut>
                   </CommandItem>

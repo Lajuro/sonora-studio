@@ -25,6 +25,7 @@ const SCHEMA = `## Estrutura da receita
   "master": { "gain": 1, "normalize": true, "fadeIn": 0, "fadeOut": 0.01, "effects": [] },
   "layers": [ ... ]      // obrigatório: 1 a 48 camadas que tocam ao mesmo tempo
 }
+- Opcionais na raiz: "transpose" (semitons somados a todas as notas; não afeta bateria nem ruído) e "speed" (multiplicador de andamento: 2 = duas vezes mais rápido, mesma afinação).
 
 ## Campos comuns de toda camada
 - "type": "tone" | "noise" | "fm" | "pluck" | "drum" | "sequence"
@@ -129,6 +130,75 @@ export function buildPrompt(opts: PromptOptions = {}): string {
       : [intro, output, rules, compact(SCHEMA), SEQ_EXAMPLE, extra, request]
 
   return parts.filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n"
+}
+
+const FORMAT_RULES = `- JSON válido: aspas duplas, sem comentários, sem vírgula sobrando.
+- Tempos em segundos. Frequências em Hz ou nota ("A4" = 440 Hz, "C#5", "Eb3").
+- Use só os campos documentados. Campos omitidos usam valores padrão.`
+
+function formatReference() {
+  return `## Formato das receitas do Sonora\n${FORMAT_RULES}\n\n${compact(SCHEMA)}`
+}
+
+function minify(json: string) {
+  try {
+    return JSON.stringify(JSON.parse(json))
+  } catch {
+    return json.trim()
+  }
+}
+
+export type RefineOptions = {
+  /** receita atual (JSON) */
+  json: string
+  /** o que o usuário quer mudar, em linguagem natural */
+  change: string
+  variations?: number
+  /** inclui a referência do formato (desligue se a IA já recebeu o prompt nesta conversa) */
+  includeFormat?: boolean
+  extra?: string
+}
+
+/** Pedido para a IA alterar uma receita existente. */
+export function buildRefinePrompt(opts: RefineOptions): string {
+  const variations = Math.max(1, Math.min(6, Math.round(opts.variations ?? 1)))
+  const change = opts.change.trim() || "Crie uma variação: mantenha a essência, mas mude o timbre e o ritmo."
+  const output =
+    variations > 1
+      ? `Responda SOMENTE com um array JSON contendo ${variations} versões diferentes da receita alterada, dentro de um único bloco \`\`\`json. Sem texto antes ou depois.`
+      : `Responda SOMENTE com o JSON completo da receita alterada (não só o trecho que mudou), dentro de um único bloco \`\`\`json. Sem texto antes ou depois.`
+  const parts = [
+    `Você é um designer de som especialista em síntese. Abaixo está uma RECEITA em JSON do app "Sonora", que sintetiza o áudio localmente. Altere a receita conforme o pedido, mantendo o que não foi pedido para mudar.`,
+    output,
+    opts.includeFormat === false ? "" : formatReference(),
+    opts.extra?.trim() ? `## Instruções adicionais\n${opts.extra.trim()}` : "",
+    `## Receita atual\n\`\`\`json\n${minify(opts.json)}\n\`\`\``,
+    `## Alteração pedida\n${change}`,
+  ]
+  return parts.filter(Boolean).join("\n\n").trim() + "\n"
+}
+
+export type FixOptions = {
+  /** texto que está no editor (pode ser JSON inválido) */
+  text: string
+  errors: { line?: number; path?: string; message: string }[]
+  includeFormat?: boolean
+}
+
+/** Pedido para a IA corrigir uma receita que não passou na validação. */
+export function buildFixPrompt(opts: FixOptions): string {
+  const errors = opts.errors
+    .slice(0, 30)
+    .map((e) => `- ${e.line ? `Linha ${e.line}` : "Receita"}${e.path && e.path !== "(raiz)" ? ` (${e.path})` : ""}: ${e.message}`)
+    .join("\n")
+  const parts = [
+    `A receita em JSON abaixo, do app "Sonora" (que sintetiza áudio localmente), não passou na validação. Corrija os erros listados sem mudar o som além do necessário.`,
+    `Responda SOMENTE com o JSON completo e corrigido, dentro de um único bloco \`\`\`json. Sem texto antes ou depois.`,
+    `## Erros encontrados\n${errors}`,
+    opts.includeFormat === false ? "" : formatReference(),
+    `## Receita com erro\n\`\`\`json\n${opts.text.trim()}\n\`\`\``,
+  ]
+  return parts.filter(Boolean).join("\n\n").trim() + "\n"
 }
 
 /** Versão enxuta do esquema para chats com limite de caracteres. */

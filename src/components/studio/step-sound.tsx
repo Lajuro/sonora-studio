@@ -8,6 +8,7 @@ import {
   CopyIcon,
   Gauge,
   LayersIcon,
+  Link2Icon,
   PauseIcon,
   PlayIcon,
   RadioTowerIcon,
@@ -32,10 +33,13 @@ import { player, usePlayer } from "@/lib/audio/player"
 import { copyText, formatDb, formatDuration, formatTime } from "@/lib/helpers"
 import { cn } from "@/lib/utils"
 import { useHistory } from "@/stores/history"
-import { editRecipe, setLayerMix, useStudio } from "@/stores/studio"
+import { copyShareLink, editRecipe, setLayerMix, useStudio } from "@/stores/studio"
 import { ExportPanel } from "./export-panel"
 import { EqBars, MotionButton } from "./fx"
 import { LayerTimeline } from "./layer-timeline"
+import { QuickTweaks } from "./quick-tweaks"
+import { RefinePopover } from "./refine-popover"
+import { VariationTabs } from "./variation-tabs"
 import { Spectrum } from "./spectrum"
 import { Waveform } from "./waveform"
 
@@ -129,7 +133,6 @@ export function StepSound() {
   const solo = useStudio((s) => s.solo)
   const rerendering = useStudio((s) => s.rerendering)
   const setStep = useStudio((s) => s.setStep)
-  const setDescription = useStudio((s) => s.setDescription)
   const historyItem = useHistory((s) => s.items.find((i) => i.id === current?.id))
   const loop = usePlayer((s) => s.loop)
   const setLoop = usePlayer((s) => s.setLoop)
@@ -196,19 +199,15 @@ export function StepSound() {
             <BracesIcon />
             Editar receita
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setDescription(
-                `Uma variação de "${name}"${recipe.description ? ` (${recipe.description})` : ""}. Mantenha a essência, mas mude o timbre e o ritmo.`,
-              )
-              setStep(1)
-            }}
-          >
-            <SparklesIcon />
-            Pedir variação
-          </Button>
+          <RefinePopover key={current.id} json={current.json} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon-sm" aria-label="Copiar link da receita" onClick={() => void copyShareLink(current.json)}>
+                <Link2Icon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copiar link para compartilhar</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -226,6 +225,8 @@ export function StepSound() {
           </Tooltip>
         </div>
       </div>
+
+      <VariationTabs currentId={current.id} />
 
       {/* Player */}
       <motion.div
@@ -298,6 +299,7 @@ export function StepSound() {
             </div>
           </div>
         </div>
+        <QuickTweaks key={current.id} recipe={recipe} />
       </motion.div>
 
       {/* Estatísticas */}

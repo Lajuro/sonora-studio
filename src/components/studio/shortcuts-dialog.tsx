@@ -26,6 +26,7 @@ export function ShortcutsDialog() {
       items: [
         ["Copiar prompt", [mod, "Shift", "C"]],
         ["Gerar som da receita", [mod, "Enter"]],
+        ["Ouvir prévia (no editor)", ["Alt", "Enter"]],
       ],
     },
     {

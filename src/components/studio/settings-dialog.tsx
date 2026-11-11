@@ -59,6 +59,9 @@ export function SettingsDialog() {
                 ))}
               </ToggleGroup>
             </Row>
+            <Row title="Formato nos pedidos de ajuste" hint="Pedidos de ajuste e correção levam a referência do formato">
+              <Switch checked={s.includeFormat} onCheckedChange={(v) => s.set({ includeFormat: v })} />
+            </Row>
             <div className="space-y-2 py-3">
               <Label htmlFor="extra" className="text-sm font-medium">
                 Instruções extras
@@ -70,7 +73,7 @@ export function SettingsDialog() {
                 placeholder="Ex.: sons sempre curtos e discretos, adequados para um ambiente de escritório; evite frequências muito agudas."
                 className="min-h-20 text-sm"
               />
-              <p className="text-xs text-muted-foreground">Entram no fim de todo prompt copiado.</p>
+              <p className="text-xs text-muted-foreground">Entram em todo prompt e pedido de ajuste copiado.</p>
             </div>
           </div>
         </section>

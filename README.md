@@ -10,6 +10,15 @@ Foi pensado para redes corporativas: tudo roda no navegador, nenhum dado sai da 
 2. **Receita.** Cole a resposta da IA no editor. Pode colar tudo, inclusive o texto que a IA escreve em volta: o Sonora extrai o JSON, formata e valida na hora, apontando erros na linha certa. Também dá para abrir um `.json`, arrastar um arquivo ou começar por um dos exemplos.
 3. **Som.** O áudio é sintetizado em milissegundos. Você ouve, vê a forma de onda e o espectro, silencia ou isola camadas e exporta no formato que precisar.
 
+Para ir e voltar com a IA sem montar nada na mão:
+
+- **Pedir ajuste:** no player, escreva o que mudar ("mais grave, sem reverb") e o app copia um pedido que já leva a receita atual.
+- **Pedir correção:** se a receita vier com erro, um botão copia o pedido de correção com os erros e a linha de cada um.
+- **Ajustes rápidos:** tom e velocidade mudam direto no player, sem IA. O ajuste fica gravado na receita (`transpose` e `speed`).
+- **Prévia:** no editor, `Alt Enter` toca a receita sem salvar. No menu Exemplos, cada item tem um botão para ouvir.
+- **Variações:** quando a IA devolve várias receitas, elas aparecem como abas no topo do player para comparar.
+- **Link:** o botão de link copia um endereço com a receita compactada dentro. Quem abrir recebe a receita no editor.
+
 Tudo que você gera fica salvo automaticamente no **histórico** (barra lateral redimensionável), que dá para tocar direto, favoritar, renomear, buscar e baixar.
 
 ## Formatos de exportação
@@ -104,6 +113,8 @@ A receita descreve camadas que tocam juntas. Cada camada tem um tipo, tempo de i
 
 **Efeitos:** reverb, delay (com ping-pong), distortion, bitcrush, chorus, phaser, tremolo, filter, compressor e eq.
 
+**Ajustes globais:** `transpose` (semitons somados a todas as notas) e `speed` (multiplicador de andamento, sem mudar a afinação) na raiz da receita.
+
 **Automação:** frequências, filtros e pan aceitam valor fixo (`440` ou `"A4"`), rampa (`{ "from": 2000, "to": 100 }`) ou pontos (`{ "points": [[0, 300], [0.5, 5000]] }`).
 
 O validador é tolerante: aceita comentários, vírgula sobrando, cercas de markdown, apelidos comuns (`freq`, `cutoff`, `saw`, `echo`...) e limita valores fora da faixa. Propriedades desconhecidas viram avisos e são ignoradas. O formato completo está no próprio prompt (botão **Ver prompt**) e em `src/lib/recipe/schema.ts`. Há 16 receitas de exemplo no menu **Exemplos**.
@@ -118,6 +129,7 @@ A síntese é determinística: a mesma receita sempre gera exatamente o mesmo á
 | Mostrar/ocultar histórico | `Ctrl B` |
 | Copiar prompt | `Ctrl Shift C` |
 | Gerar som | `Ctrl Enter` |
+| Ouvir prévia (no editor) | `Alt Enter` |
 | Tocar / pausar | `Espaço` |
 | Parar | `Esc` |
 | Ir para a etapa 1, 2 ou 3 | `Alt 1` a `Alt 3` |
