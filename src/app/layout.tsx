@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next"
 import { GeistMono } from "geist/font/mono"
 import { GeistPixelSquare } from "geist/font/pixel/square"
-import { GeistSans } from "geist/font/sans"
 import { Providers } from "@/components/providers"
+import "@fontsource-variable/archivo/wdth.css"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0d14" },
+    { media: "(prefers-color-scheme: light)", color: "#efefec" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d1c1a" },
   ],
 }
 
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} h-full antialiased`}
+      className={`${GeistMono.variable} ${GeistPixelSquare.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden">
         <Providers>{children}</Providers>

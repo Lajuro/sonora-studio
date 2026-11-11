@@ -10,9 +10,11 @@ import { player } from "@/lib/audio/player"
 import { cn } from "@/lib/utils"
 import { useSettings } from "@/stores/settings"
 import { useHistory } from "@/stores/history"
-import { copyPrompt, generateFromDraft, importFromHash, openHistoryItem, useStudio, type Step } from "@/stores/studio"
+import { copyPrompt, generateFromDraft, importFromHash, openHistoryItem, startNew, useStudio, type Step } from "@/stores/studio"
 import { commands, useUi } from "@/stores/ui"
+import { CollectionDialog } from "./collection-dialog"
 import { CommandPalette } from "./command-palette"
+import { ExportDialog } from "./export-panel"
 import { Header } from "./header"
 import { HistorySidebar } from "./history-sidebar"
 import { SettingsDialog } from "./settings-dialog"
@@ -95,6 +97,9 @@ export function AppShell() {
       } else if (mod && k === "enter") {
         e.preventDefault()
         void generateFromDraft()
+      } else if (e.altKey && k === "n") {
+        e.preventDefault()
+        startNew()
       } else if (e.altKey && ["1", "2", "3"].includes(e.key)) {
         e.preventDefault()
         useStudio.getState().setStep(Number(e.key) as Step)
@@ -129,8 +134,6 @@ export function AppShell() {
 
   const main = (
     <main className="relative flex h-full min-w-0 flex-col bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-glow" />
-      <div className="pointer-events-none absolute inset-0 bg-grid mask-fade-b opacity-60 [mask-image:radial-gradient(70%_60%_at_50%_0%,black,transparent)]" />
       <Header isDesktop={isDesktop} sidebarCollapsed={collapsed} />
       <div className="relative min-h-0 flex-1">
         <AnimatePresence mode="popLayout" initial={false} custom={direction}>
@@ -138,14 +141,14 @@ export function AppShell() {
             key={step}
             custom={direction}
             variants={{
-              enter: (d: number) => ({ opacity: 0, x: 32 * d, filter: "blur(6px)" }),
-              center: { opacity: 1, x: 0, filter: "blur(0px)" },
-              exit: (d: number) => ({ opacity: 0, x: -32 * d, filter: "blur(6px)" }),
+              enter: (d: number) => ({ opacity: 0, x: 20 * d }),
+              center: { opacity: 1, x: 0 },
+              exit: (d: number) => ({ opacity: 0, x: -20 * d }),
             }}
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="absolute inset-0 overflow-y-auto scrollbar-thin"
           >
             {step === 1 && <StepPrompt />}
@@ -184,11 +187,11 @@ export function AppShell() {
           <ResizableHandle
             onDoubleClick={toggleSidebar}
             className={cn(
-              "group/handle z-20 w-px bg-sidebar-border transition-colors after:w-2.5",
-              "hover:bg-primary/60 data-[separator=active]:bg-primary aria-[valuenow]:hover:bg-primary/60",
+              "group/handle z-20 w-px bg-border transition-colors after:w-2.5",
+              "hover:bg-primary data-[separator=active]:bg-primary",
             )}
           >
-            <div className="pointer-events-none absolute top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-all duration-200 group-hover/handle:h-14 group-hover/handle:bg-primary group-hover/handle:opacity-100" />
+            <div className="pointer-events-none absolute top-1/2 h-10 w-1 -translate-y-1/2 rounded-full bg-primary opacity-0 transition-opacity group-hover/handle:opacity-100" />
           </ResizableHandle>
           <ResizablePanel id="main" minSize="45%">
             {main}
@@ -212,6 +215,8 @@ export function AppShell() {
         </>
       )}
       <CommandPalette />
+      <CollectionDialog />
+      <ExportDialog />
       <SettingsDialog />
       <ShortcutsDialog />
     </div>

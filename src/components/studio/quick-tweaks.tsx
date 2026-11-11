@@ -76,8 +76,8 @@ function Knob({
       </Button>
       <span
         className={cn(
-          "w-12 shrink-0 text-right font-mono text-xs tabular sm:w-[92px]",
-          value !== neutral ? "text-primary" : "text-muted-foreground",
+          "w-12 shrink-0 text-right text-xs tabular sm:w-[92px]",
+          value !== neutral ? "text-brand" : "text-muted-foreground",
         )}
       >
         <span className="sm:hidden">{shortDisplay}</span>
@@ -106,7 +106,7 @@ export function QuickTweaks({ recipe }: { recipe: Recipe }) {
   const speedLabel = speed === 1 ? "original" : `${speed.toFixed(2).replace(".", ",")}×`
 
   return (
-    <div className="mt-4 flex flex-col gap-x-6 gap-y-2 border-t pt-3 lg:flex-row lg:items-center">
+    <div className="flex flex-col gap-x-6 gap-y-2 border-t pt-3 lg:flex-row lg:items-center">
       <Knob
         icon={Music2Icon}
         label="Tom"

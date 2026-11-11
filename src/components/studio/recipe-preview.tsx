@@ -45,7 +45,7 @@ export function DiagnosticList({
               )}
               <span className="min-w-0 flex-1">
                 <span className="block text-foreground/90">{d.message}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground tabular">
                   {d.line ? `linha ${d.line}:${d.column}` : ""}
                   {d.path ? ` · ${d.path}` : ""}
                 </span>
@@ -69,11 +69,11 @@ function RecipeSummary({ recipe, index, total }: { recipe: Recipe; index: number
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/70 p-4"
+      className="rounded-xl border bg-card p-4"
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          {total > 1 && <p className="mb-1 font-pixel text-[10px] tracking-wider text-muted-foreground uppercase">Variação {index + 1}</p>}
+          {total > 1 && <p className="mb-1 text-xs text-muted-foreground">Som {index + 1} de {total}</p>}
           <h3 className="truncate font-semibold">{recipe.name}</h3>
           {recipe.description && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{recipe.description}</p>}
         </div>
@@ -181,7 +181,7 @@ export function RecipePreview({
   if (empty || !result) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-6 text-center">
-        <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} className="grid size-12 place-items-center rounded-2xl bg-muted">
+        <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} className="grid size-12 place-items-center rounded-xl bg-muted">
           <FileJson2Icon className="size-6 text-muted-foreground" />
         </motion.div>
         <div>

@@ -9,9 +9,9 @@ import { player } from "@/lib/audio/player"
 import { copyText, uid } from "@/lib/helpers"
 import { buildFixPrompt, buildPrompt, buildRefinePrompt } from "@/lib/recipe/prompt"
 import { parseRecipeText, type Diagnostic } from "@/lib/recipe/parse"
-import type { Recipe } from "@/lib/recipe/schema"
+import type { LayerType, Recipe } from "@/lib/recipe/schema"
 import { decodeRecipe, MAX_SHARE_LENGTH, shareUrl } from "@/lib/recipe/share"
-import { useHistory, type HistoryItem } from "./history"
+import { useHistory, type GenerationKind, type HistoryItem } from "./history"
 import { useSettings } from "./settings"
 
 export type Step = 1 | 2 | 3
@@ -23,7 +23,14 @@ export type CurrentSound = {
   result: RenderResult
 }
 
+/** O pedido que vai rotular a próxima geração no histórico. */
+export type PendingRequest = { kind: GenerationKind; text: string; parentName?: string }
+
 type StudioState = {
+  /** pedido da próxima geração (preenchido ao copiar o prompt, pedir ajuste, abrir exemplo...) */
+  request: PendingRequest | null
+  /** texto do editor tal como foi carregado ou gerado; enquanto não mudar, colar substitui tudo */
+  pristine: string | null
   step: Step
   direction: 1 | -1
   description: string
@@ -45,6 +52,8 @@ type StudioState = {
 export const useStudio = create<StudioState>()(
   persist(
     (set, get) => ({
+      request: null,
+      pristine: null,
       step: 1,
       direction: 1,
       description: "",
@@ -67,7 +76,13 @@ export const useStudio = create<StudioState>()(
     {
       name: "sonora-studio",
       version: 1,
-      partialize: (s) => ({ description: s.description, draft: s.draft, lastId: s.current?.id ?? s.lastId }),
+      partialize: (s) => ({
+        description: s.description,
+        draft: s.draft,
+        lastId: s.current?.id ?? s.lastId,
+        request: s.request,
+        pristine: s.pristine,
+      }),
     },
   ),
 )
@@ -121,7 +136,7 @@ export async function generateFromDraft(text = useStudio.getState().draft) {
     let firstCurrent: CurrentSound | null = null
     let reused = 0
     const started = performance.now()
-    const batch = parsed.recipes.length > 1 ? uid() : undefined
+    const batch = uid()
     const baseTime = Date.now()
     for (let i = 0; i < parsed.recipes.length; i++) {
       const recipe = parsed.recipes[i]
@@ -155,6 +170,7 @@ export async function generateFromDraft(text = useStudio.getState().draft) {
         peaks: miniPeaks(result.channels),
         favorite: false,
         batch,
+        kinds: layerKinds(recipe),
       })
       if (!firstCurrent) firstCurrent = { id, recipe, json, result }
     }
@@ -162,9 +178,22 @@ export async function generateFromDraft(text = useStudio.getState().draft) {
     const elapsed = performance.now() - started
     if (elapsed < 450) await new Promise((r) => setTimeout(r, 450 - elapsed))
 
-    if (items.length) useHistory.getState().add(items)
+    if (items.length) {
+      const request = useStudio.getState().request
+      useHistory.getState().addGeneration(
+        {
+          id: batch,
+          createdAt: baseTime,
+          kind: request?.kind ?? "manual",
+          request: request?.text.trim() ?? "",
+          parentName: request?.parentName,
+        },
+        items,
+      )
+    }
     if (!firstCurrent) return
-    useStudio.setState({ current: firstCurrent, muted: [], solo: null })
+    // o pedido foi usado; o editor fica "intacto" até o usuário mexer nele
+    useStudio.setState({ current: firstCurrent, muted: [], solo: null, request: null, pristine: text })
     useStudio.getState().setStep(3)
 
     if (parsed.warnings.length) {
@@ -176,7 +205,7 @@ export async function generateFromDraft(text = useStudio.getState().draft) {
       })
     }
     if (items.length > 1) {
-      toast.success(`${items.length} variações geradas`, { description: "Compare as versões no topo do player. Todas estão no histórico." })
+      toast.success(`${items.length} sons gerados`, { description: "Todos aparecem juntos acima do player e no histórico." })
     } else if (reused && !items.length) {
       toast.info(reused > 1 ? "Esses sons já estavam no histórico" : "Esse som já estava no histórico", {
         description: "Abri o que já existia em vez de criar uma cópia.",
@@ -254,9 +283,53 @@ export async function setLayerMix(muted: number[], solo: number | null) {
   }
 }
 
-export function editRecipe(json: string) {
-  useStudio.setState({ draft: json })
+function layerKinds(recipe: Recipe): LayerType[] {
+  const count = new Map<LayerType, number>()
+  for (const l of recipe.layers) count.set(l.type, (count.get(l.type) ?? 0) + 1)
+  return [...count.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k)
+}
+
+export function editRecipe(json: string, name?: string) {
+  useStudio.setState({ draft: json, pristine: json, request: { kind: "edicao", text: "", parentName: name } })
   useStudio.getState().setStep(2)
+}
+
+/** Carrega uma receita de exemplo no editor. */
+export function loadExample(json: string, name: string) {
+  useStudio.setState({ draft: json, pristine: json, request: { kind: "exemplo", text: name } })
+  useStudio.getState().setStep(2)
+}
+
+/** Começa um som do zero: limpa descrição, editor e pedido pendente. */
+export function startNew() {
+  player.stop()
+  useStudio.setState({ description: "", draft: "", request: null, pristine: null })
+  useStudio.getState().setStep(1)
+}
+
+/** Reaproveita um pedido antigo como ponto de partida. */
+export function reuseRequest(text: string) {
+  useStudio.setState({ description: text, draft: "", request: null, pristine: null })
+  useStudio.getState().setStep(1)
+}
+
+/** Edita o texto do pedido que vai rotular a próxima geração. */
+export function setRequestText(text: string) {
+  const prev = useStudio.getState().request
+  if (!text && (!prev || prev.kind === "manual")) useStudio.setState({ request: null })
+  else useStudio.setState({ request: { kind: prev?.kind ?? "manual", text, parentName: prev?.parentName } })
+}
+
+/** Exclui sons do histórico, com opção de desfazer. */
+export function removeSounds(items: HistoryItem[]) {
+  if (!items.length) return
+  const removed = useHistory.getState().remove(items.map((i) => i.id))
+  for (const i of items) forgetRender(i.id)
+  const cur = useStudio.getState().current
+  if (cur && items.some((i) => i.id === cur.id)) useStudio.setState({ current: null, lastId: null })
+  toast(items.length === 1 ? `“${items[0].name}” excluído` : `${items.length} sons excluídos`, {
+    action: { label: "Desfazer", onClick: () => useHistory.getState().restore(removed) },
+  })
 }
 
 export function forgetRender(id: string) {
@@ -281,6 +354,7 @@ export async function copyPrompt() {
   const ok = await copyText(currentPrompt())
   if (ok) {
     const hasDesc = Boolean(useStudio.getState().description.trim())
+    useStudio.setState({ request: { kind: "novo", text: useStudio.getState().description.trim() } })
     toast.success("Prompt copiado!", {
       description: hasDesc
         ? "Cole na IA da sua empresa e traga a receita JSON de volta."
@@ -394,12 +468,15 @@ export function refinePrompt(json: string, change: string, variations = 1) {
   return buildRefinePrompt({ json, change, variations, includeFormat, extra: promptExtra })
 }
 
-export function copyRefinePrompt(json: string, change: string, variations = 1) {
-  return copyWithToast(
+export async function copyRefinePrompt(json: string, change: string, variations = 1, parentName?: string) {
+  const ok = await copyWithToast(
     refinePrompt(json, change, variations),
     "Pedido de ajuste copiado!",
     "Cole na IA e traga a nova receita para a etapa Receita.",
   )
+  // o editor fica pronto para receber a resposta: colar substitui a receita antiga
+  if (ok) useStudio.setState({ request: { kind: "ajuste", text: change.trim(), parentName }, draft: json, pristine: json })
+  return ok
 }
 
 export function copyFixPrompt(text: string, errors: Diagnostic[]) {
@@ -422,14 +499,14 @@ export function importFromHash() {
   const json = decodeRecipe(window.location.hash)
   if (json === null) return false
   window.history.replaceState(null, "", window.location.pathname + window.location.search)
-  useStudio.setState({ draft: json })
-  useStudio.getState().setStep(2)
   let name = ""
   try {
     name = String(JSON.parse(json).name ?? "")
   } catch {
     /* sem nome */
   }
+  useStudio.setState({ draft: json, pristine: json, request: { kind: "link", text: name } })
+  useStudio.getState().setStep(2)
   toast.success(name ? `Receita “${name}” recebida por link` : "Receita recebida por link", {
     description: "Confira no editor e clique em Gerar som.",
   })

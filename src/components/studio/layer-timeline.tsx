@@ -39,7 +39,7 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
   )
 
   return (
-    <div className="rounded-2xl border bg-card/70 p-4">
+    <div className="rounded-xl border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Camadas</h3>
@@ -62,7 +62,7 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
             <span
               key={m}
               className={cn(
-                "absolute -translate-x-1/2 font-mono text-[10px] whitespace-nowrap text-muted-foreground tabular",
+                "absolute -translate-x-1/2 text-[10px] whitespace-nowrap text-muted-foreground tabular",
                 i % 2 === 1 && "hidden sm:inline",
               )}
               style={{ left: pct(m) }}
@@ -123,7 +123,7 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
                         size="icon-xs"
                         aria-pressed={isSolo}
                         onClick={() => onMix(muted, isSolo ? null : i)}
-                        className={cn(isSolo && "bg-primary/15 text-primary")}
+                        className={cn(isSolo && "bg-primary/15 text-brand")}
                       >
                         <HeadphonesIcon />
                       </Button>
@@ -178,7 +178,7 @@ export function LayerTimeline({ recipe, spans, duration, position, showPlayhead,
 
         {showPlayhead && (
           <div className="pointer-events-none absolute top-5 bottom-0 left-[148px] right-0 sm:left-[188px]">
-            <div className="absolute inset-y-0 w-px bg-foreground/80 shadow-[0_0_8px_var(--brand)]" style={{ left: pct(position) }} />
+            <div className="absolute inset-y-0 w-px bg-foreground/80" style={{ left: pct(position) }} />
           </div>
         )}
       </div>

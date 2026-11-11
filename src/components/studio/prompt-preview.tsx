@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useSettings } from "@/stores/settings"
 import { copyPrompt, currentPrompt, useStudio } from "@/stores/studio"
 import { useUi } from "@/stores/ui"
@@ -27,23 +28,33 @@ export function PromptPreviewDialog() {
         <DialogHeader className="border-b p-5">
           <DialogTitle>Prompt para a IA</DialogTitle>
           <DialogDescription>
-            {prompt.length.toLocaleString("pt-BR")} caracteres · modo {settings.promptMode === "full" ? "completo" : "compacto"}
-            {settings.variations > 1 ? ` · ${settings.variations} variações` : ""}
+            {prompt.length.toLocaleString("pt-BR")} caracteres. O compacto ajuda quando a IA tem limite de texto.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-auto bg-muted/30 scrollbar-thin">
-          <pre className="p-5 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap text-foreground/90 select-text">{prompt}</pre>
+          <pre className="p-5 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-foreground/90 select-text">{prompt}</pre>
         </div>
         <DialogFooter className="m-0 flex-row items-center justify-between rounded-b-xl border-t p-4 sm:justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              set({ promptPreviewOpen: false, settingsOpen: true })
-            }}
-          >
-            Instruções extras…
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleGroup
+              type="single"
+              size="sm"
+              variant="outline"
+              value={settings.promptMode}
+              onValueChange={(v) => v && settings.set({ promptMode: v as "full" | "compact" })}
+              aria-label="Tamanho do prompt"
+            >
+              <ToggleGroupItem value="full" className="px-2.5 text-xs">
+                Completo
+              </ToggleGroupItem>
+              <ToggleGroupItem value="compact" className="px-2.5 text-xs">
+                Compacto
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button variant="ghost" size="sm" onClick={() => set({ promptPreviewOpen: false, settingsOpen: true })}>
+              Instruções extras
+            </Button>
+          </div>
           <MotionButton
             whileTap={{ scale: 0.95 }}
             onClick={async () => {

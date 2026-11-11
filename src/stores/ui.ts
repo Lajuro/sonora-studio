@@ -9,6 +9,11 @@ type UiState = {
   mobileHistoryOpen: boolean
   promptPreviewOpen: boolean
   renameId: string | null
+  /** geração cuja descrição está sendo editada na barra lateral */
+  editGenerationId: string | null
+  exportOpen: boolean
+  /** diálogo de coleção: criar (opcionalmente já movendo sons) ou renomear */
+  collectionDialog: { mode: "criar"; moveIds?: string[] } | { mode: "renomear"; id: string } | null
   set: (patch: Partial<Omit<UiState, "set">>) => void
 }
 
@@ -19,6 +24,9 @@ export const useUi = create<UiState>()((set) => ({
   mobileHistoryOpen: false,
   promptPreviewOpen: false,
   renameId: null,
+  editGenerationId: null,
+  exportOpen: false,
+  collectionDialog: null,
   set: (patch) => set(patch),
 }))
 
@@ -26,6 +34,6 @@ export const useUi = create<UiState>()((set) => ({
 type Commands = {
   toggleSidebar?: () => void
   focusSearch?: () => void
-  copyPrompt?: () => void
+  focusDescription?: () => void
 }
 export const commands: Commands = {}

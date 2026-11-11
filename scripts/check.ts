@@ -5,6 +5,8 @@
  */
 import { encodeFlac } from "../src/lib/audio/encoders/flac"
 import { encodeAiff, encodeWav } from "../src/lib/audio/encoders/pcm"
+import type { HistoryItem } from "../src/lib/history-model"
+import { buildLibrary } from "../src/lib/library"
 import { EXAMPLES } from "../src/lib/recipe/examples"
 import { parseRecipeText } from "../src/lib/recipe/parse"
 import { buildFixPrompt, buildPrompt, buildRefinePrompt } from "../src/lib/recipe/prompt"
@@ -52,6 +54,31 @@ ok(!broken.ok && buildFixPrompt({ text: "{}", errors: broken.errors }).includes(
 const link = encodeRecipe(JSON.stringify(EXAMPLES[0].recipe))
 ok(decodeRecipe("#" + link) === JSON.stringify(EXAMPLES[0].recipe, null, 2), `link de compartilhamento ida e volta (${link.length} caracteres)`)
 ok(decodeRecipe("#r=lixo!") === null && decodeRecipe("#outra-coisa") === null, "link inválido é ignorado")
+
+// Organização do histórico
+const mk = (id: string, name: string, createdAt: number, extra: Partial<HistoryItem> = {}): HistoryItem => ({
+  id, name, json: "{}", createdAt, duration: 1, sampleRate: 44100, channels: 2, layers: 1, peaks: [], favorite: false, ...extra,
+})
+const libItems = [
+  mk("a", "Zumbido", 5000, { batch: "g2", duration: 3 }),
+  mk("b", "Alerta", 4000, { batch: "g2", collectionId: "c1", tags: ["ui"] }),
+  mk("c", "Moeda", 3000, { batch: "g1", favorite: true, tags: ["jogo"] }),
+  mk("d", "Antigo", 1000),
+]
+const libGens = {
+  g1: { id: "g1", createdAt: 3000, kind: "novo" as const, request: "moeda de videogame" },
+  g2: { id: "g2", createdAt: 4000, kind: "ajuste" as const, request: "mais grave", parentName: "Moeda" },
+}
+const lib = (o: Partial<Parameters<typeof buildLibrary>[0]>) =>
+  buildLibrary({ items: libItems, generations: libGens, collections: [{ id: "c1", name: "App", color: "#fff" }], query: "", filter: "todos", groupBy: "geracao", sortBy: "recentes", ...o })
+const byGen = lib({})
+ok(byGen.map((g) => g.label).join("|") === "mais grave|moeda de videogame|Receita colada" && byGen[0].items.length === 2, "agrupa por pedido, do mais recente ao mais antigo")
+ok(lib({ query: "videogame" }).flatMap((g) => g.items).map((i) => i.id).join() === "c", "a busca encontra pelo texto do pedido")
+ok(lib({ filter: "c1" }).flatMap((g) => g.items).map((i) => i.id).join() === "b", "filtra por coleção")
+ok(lib({ filter: "favoritos", groupBy: "nenhum" })[0].items[0].id === "c", "filtra por favoritos")
+ok(lib({ groupBy: "nenhum", sortBy: "nome" })[0].items.map((i) => i.name).join() === "Alerta,Antigo,Moeda,Zumbido", "ordena por nome")
+ok(lib({ groupBy: "colecao" }).map((g) => `${g.label}:${g.items.length}`).join() === "App:1,Sem coleção:3", "agrupa por coleção")
+ok(lib({ groupBy: "etiqueta" }).at(-1)?.label === "Sem etiqueta", "agrupa por etiqueta")
 
 const sr = 44100
 const tone = new Float32Array(sr).map((_, i) => 0.5 * Math.sin((2 * Math.PI * 440 * i) / sr))

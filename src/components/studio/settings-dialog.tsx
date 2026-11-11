@@ -38,7 +38,7 @@ export function SettingsDialog() {
         </DialogHeader>
 
         <section>
-          <h4 className="pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Prompt</h4>
+          <h4 className="pt-2 text-sm font-semibold">Prompt</h4>
           <div className="divide-y">
             <Row title="Versão do prompt" hint="Compacto ajuda em chats com limite de caracteres">
               <ToggleGroup type="single" size="sm" variant="outline" value={s.promptMode} onValueChange={(v) => v && s.set({ promptMode: v as "full" | "compact" })}>
@@ -79,7 +79,7 @@ export function SettingsDialog() {
         </section>
 
         <section>
-          <h4 className="pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Reprodução e exportação</h4>
+          <h4 className="pt-2 text-sm font-semibold">Reprodução e exportação</h4>
           <div className="divide-y">
             <Row title="Tocar ao gerar" hint="Reproduz automaticamente o som recém-criado">
               <Switch checked={s.autoPlay} onCheckedChange={(v) => s.set({ autoPlay: v })} />

@@ -5,10 +5,10 @@ import { LogoMark } from "./logo"
 
 function Splash() {
   return (
-    <div className="grid h-dvh place-items-center bg-background bg-glow">
+    <div className="grid h-dvh place-items-center bg-background">
       <div className="flex flex-col items-center gap-4">
-        <LogoMark active className="size-12 rounded-2xl" />
-        <span className="font-pixel text-xs tracking-[0.3em] text-muted-foreground uppercase">Sonora</span>
+        <LogoMark active className="size-12 rounded-xl" />
+        <span className="display text-sm text-muted-foreground">Sonora</span>
       </div>
     </div>
   )

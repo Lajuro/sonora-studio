@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "motion/react"
-import { SparklesIcon } from "lucide-react"
+import { SlidersHorizontalIcon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -29,7 +29,7 @@ const IDEAS = [
 ]
 
 /** Monta e copia um pedido para a IA alterar a receita atual. */
-export function RefinePopover({ json }: { json: string }) {
+export function RefinePopover({ json, name }: { json: string; name?: string }) {
   const [open, setOpen] = useState(false)
   const [change, setChange] = useState("")
   const [variations, setVariations] = useState(1)
@@ -47,12 +47,12 @@ export function RefinePopover({ json }: { json: string }) {
   }
 
   const submit = async () => {
-    if (!(await copyRefinePrompt(json, change, variations))) return
+    if (!(await copyRefinePrompt(json, change, variations, name))) return
     setCopied(true)
     setTimeout(() => {
       setCopied(false)
       setOpen(false)
-      toast("Quando a IA responder, cole a receita nova", {
+      toast("Quando a IA responder, cole a receita na etapa Receita", {
         action: { label: "Abrir Receita", onClick: () => useStudio.getState().setStep(2) },
       })
     }, 700)
@@ -61,8 +61,8 @@ export function RefinePopover({ json }: { json: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
-          <SparklesIcon />
+        <Button variant="outline">
+          <SlidersHorizontalIcon />
           Pedir ajuste
         </Button>
       </PopoverTrigger>
@@ -98,7 +98,7 @@ export function RefinePopover({ json }: { json: string }) {
                 onClick={() => toggleIdea(idea)}
                 className={cn(
                   "rounded-full border px-2 py-0.5 text-xs transition-colors",
-                  active ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                  active ? "border-primary/40 bg-primary/10 text-brand" : "text-muted-foreground hover:border-primary/30 hover:text-foreground",
                 )}
               >
                 {idea}

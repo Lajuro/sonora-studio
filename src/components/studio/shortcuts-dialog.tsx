@@ -14,6 +14,7 @@ export function ShortcutsDialog() {
     {
       title: "Geral",
       items: [
+        ["Novo som", ["Alt", "N"]],
         ["Buscar e comandos", [mod, "K"]],
         ["Mostrar/ocultar histórico", [mod, "B"]],
         ["Configurações", [mod, ","]],
@@ -57,7 +58,7 @@ export function ShortcutsDialog() {
         <div className="space-y-4">
           {groups.map((g) => (
             <div key={g.title}>
-              <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{g.title}</p>
+              <p className="mb-1 text-sm font-semibold">{g.title}</p>
               <ul className="divide-y rounded-lg border">
                 {g.items.map(([label, keys]) => (
                   <li key={label} className="flex items-center justify-between px-3 py-2 text-sm">

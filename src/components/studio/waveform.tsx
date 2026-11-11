@@ -63,7 +63,10 @@ export function Waveform({ channels, duration, position, playing, onSeek, classN
   }, [channels, bars])
 
   const colors = useMemo(
-    () => (typeof window === "undefined" ? null : { brand: cssVar("--brand"), brand2: cssVar("--brand-2"), muted: cssVar("--muted-foreground") }),
+    () =>
+      typeof window === "undefined"
+        ? null
+        : { played: cssVar("--primary"), rest: cssVar("--deck-muted"), line: cssVar("--deck-muted") },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [resolvedTheme],
   )
@@ -81,13 +84,9 @@ export function Waveform({ channels, duration, position, playing, onSeek, classN
     const mid = size.h / 2
     const progress = duration > 0 ? position / duration : 0
     const hoverP = hover !== null && duration > 0 ? hover / duration : null
-    const grad = ctx.createLinearGradient(0, 0, size.w, 0)
-    grad.addColorStop(0, colors.brand)
-    grad.addColorStop(1, colors.brand2)
-
     // linha central
-    ctx.fillStyle = colors.muted
-    ctx.globalAlpha = 0.15
+    ctx.fillStyle = colors.line
+    ctx.globalAlpha = 0.5
     ctx.fillRect(0, mid - 0.5, size.w, 1)
 
     for (let i = 0; i < bars; i++) {
@@ -99,14 +98,14 @@ export function Waveform({ channels, duration, position, playing, onSeek, classN
       const h = Math.max(2, hi + lo)
       const played = p <= progress && (playing || position > 0)
       if (played) {
-        ctx.fillStyle = grad
+        ctx.fillStyle = colors.played
         ctx.globalAlpha = 1
       } else if (hoverP !== null && p <= hoverP) {
-        ctx.fillStyle = grad
-        ctx.globalAlpha = 0.55
+        ctx.fillStyle = colors.played
+        ctx.globalAlpha = 0.5
       } else {
-        ctx.fillStyle = colors.muted
-        ctx.globalAlpha = 0.38
+        ctx.fillStyle = colors.rest
+        ctx.globalAlpha = 1
       }
       ctx.beginPath()
       ctx.roundRect(x, top, BAR, h, 1.5)
@@ -155,15 +154,15 @@ export function Waveform({ channels, duration, position, playing, onSeek, classN
       <canvas ref={canvas} className="absolute inset-0 size-full" />
       {(playing || position > 0) && (
         <div
-          className="pointer-events-none absolute inset-y-0 w-0.5 rounded-full bg-foreground shadow-[0_0_12px_var(--brand)]"
+          className="pointer-events-none absolute inset-y-0 w-0.5 rounded-full bg-deck-foreground"
           style={{ left: `calc(${progressPct}% - 1px)` }}
         />
       )}
       {hover !== null && (
         <>
-          <div className="pointer-events-none absolute inset-y-0 w-px bg-foreground/40" style={{ left: `${(hover / duration) * 100}%` }} />
+          <div className="pointer-events-none absolute inset-y-0 w-px bg-deck-foreground/40" style={{ left: `${(hover / duration) * 100}%` }} />
           <div
-            className="pointer-events-none absolute -top-7 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] text-background tabular shadow"
+            className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-sm bg-deck-foreground px-1.5 py-0.5 text-[11px] text-deck tabular"
             style={{ left: `${(hover / duration) * 100}%` }}
           >
             {formatTime(hover)}

@@ -2,58 +2,37 @@
 
 import { AnimatePresence, motion } from "motion/react"
 import { useTheme } from "next-themes"
-import {
-  AudioLinesIcon,
-  BracesIcon,
-  CheckIcon,
-  HistoryIcon,
-  KeyboardIcon,
-  MoonIcon,
-  SearchIcon,
-  Settings2Icon,
-  SparklesIcon,
-  SunIcon,
-} from "lucide-react"
+import { CheckIcon, KeyboardIcon, ListMusicIcon, MoonIcon, PlusIcon, SearchIcon, Settings2Icon, SunIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { isMac } from "@/lib/helpers"
 import { cn } from "@/lib/utils"
 import { useHistory } from "@/stores/history"
-import { useStudio, type Step } from "@/stores/studio"
+import { startNew, useStudio, type Step } from "@/stores/studio"
 import { useUi } from "@/stores/ui"
-import { LogoMark } from "./logo"
 
-const STEPS: { id: Step; label: string; hint: string; icon: typeof SparklesIcon }[] = [
-  { id: 1, label: "Prompt", hint: "Descreva e copie o prompt", icon: SparklesIcon },
-  { id: 2, label: "Receita", hint: "Cole o JSON da IA", icon: BracesIcon },
-  { id: 3, label: "Som", hint: "Ouça e exporte", icon: AudioLinesIcon },
+const STEPS: { id: Step; label: string; hint: string }[] = [
+  { id: 1, label: "Pedido", hint: "Descreva o som e copie o prompt" },
+  { id: 2, label: "Receita", hint: "Cole o JSON que a IA devolveu" },
+  { id: 3, label: "Som", hint: "Ouça, ajuste e baixe" },
 ]
 
+/** As três etapas de criar um som. Também servem para navegar entre elas. */
 export function Stepper() {
   const step = useStudio((s) => s.step)
   const hasSound = useStudio((s) => Boolean(s.current))
   const setStep = useStudio((s) => s.setStep)
 
   return (
-    <nav aria-label="Etapas" className="relative flex items-center rounded-full border bg-card/70 p-1 shadow-sm backdrop-blur-md">
+    <nav aria-label="Etapas" className="mx-auto flex items-center">
       {STEPS.map((s, i) => {
         const active = step === s.id
         const done = step > s.id
         const disabled = s.id === 3 && !hasSound
-        const Icon = s.icon
         return (
           <div key={s.id} className="flex items-center">
-            {i > 0 && (
-              <div className="relative mx-0.5 h-px w-3 overflow-hidden bg-border sm:w-5">
-                <motion.div
-                  className="absolute inset-y-0 left-0 bg-primary"
-                  initial={false}
-                  animate={{ width: step > i ? "100%" : "0%" }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                />
-              </div>
-            )}
+            {i > 0 && <span className={cn("mx-1 h-px w-4 transition-colors sm:mx-2 sm:w-6", step > i ? "bg-foreground/50" : "bg-border")} />}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -62,42 +41,32 @@ export function Stepper() {
                   onClick={() => setStep(s.id)}
                   aria-current={active ? "step" : undefined}
                   className={cn(
-                    "relative flex h-8 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3.5",
-                    active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    "relative flex h-8 items-center gap-2 rounded-full pr-3 pl-1.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    active ? "text-background" : "text-muted-foreground hover:text-foreground",
                     disabled && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
                   )}
                 >
                   {active && (
                     <motion.span
                       layoutId="step-pill"
-                      className="absolute inset-0 rounded-full bg-primary shadow-[0_4px_18px_-4px_var(--primary)]"
-                      transition={{ type: "spring", stiffness: 500, damping: 38 }}
+                      className="absolute inset-0 rounded-full bg-foreground"
+                      transition={{ type: "spring", stiffness: 500, damping: 40 }}
                     />
                   )}
                   <span
                     className={cn(
-                      "relative grid size-5 place-items-center rounded-full text-[11px] font-semibold",
-                      active ? "bg-primary-foreground/15" : done ? "bg-primary/15 text-primary" : "bg-muted",
+                      "relative grid size-5 place-items-center rounded-full text-[11px] font-semibold tabular",
+                      active ? "bg-background/20" : "border border-current",
                     )}
                   >
-                    <AnimatePresence mode="wait" initial={false}>
-                      {done ? (
-                        <motion.span key="ok" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
-                          <CheckIcon className="size-3" strokeWidth={3} />
-                        </motion.span>
-                      ) : (
-                        <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                          <Icon className="size-3" />
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
+                    {done ? <CheckIcon className="size-3" strokeWidth={3} /> : s.id}
                   </span>
-                  <span className="relative hidden sm:inline">{s.label}</span>
+                  <span className={cn("relative", !active && "hidden sm:inline")}>{s.label}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 {disabled ? "Gere um som primeiro" : s.hint}
-                <Kbd className="ml-1.5">Alt+{s.id}</Kbd>
+                <Kbd className="ml-1.5">Alt {s.id}</Kbd>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -113,21 +82,22 @@ function ThemeToggle() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={() => setTheme(dark ? "light" : "dark")} aria-label="Alternar tema">
+        <Button variant="ghost" size="icon" onClick={() => setTheme(dark ? "light" : "dark")} aria-label="Alternar tema" className="hidden sm:inline-flex">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={dark ? "moon" : "sun"}
-              initial={{ rotate: -90, scale: 0, opacity: 0 }}
-              animate={{ rotate: 0, scale: 1, opacity: 1 }}
-              exit={{ rotate: 90, scale: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              initial={{ rotate: -90, scale: 0 }}
+              animate={{ rotate: 0, scale: 1 }}
+              exit={{ rotate: 90, scale: 0 }}
+              transition={{ duration: 0.15 }}
+              className="grid"
             >
               {dark ? <MoonIcon /> : <SunIcon />}
             </motion.span>
           </AnimatePresence>
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="bottom">Tema {dark ? "escuro" : "claro"}</TooltipContent>
+      <TooltipContent side="bottom">Mudar para o tema {dark ? "claro" : "escuro"}</TooltipContent>
     </Tooltip>
   )
 }
@@ -136,61 +106,62 @@ export function Header({ isDesktop, sidebarCollapsed }: { isDesktop: boolean; si
   const count = useHistory((s) => s.items.length)
   const ui = useUi((s) => s.set)
   const mod = isMac() ? "⌘" : "Ctrl"
+  const sidebarHidden = !isDesktop || sidebarCollapsed
 
   return (
-    <header className="relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/60 px-3 backdrop-blur-xl sm:px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+    <header className="relative z-10 flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+      <div className="flex shrink-0 items-center gap-1.5 sm:min-w-0 sm:flex-1">
         {!isDesktop && (
-          <>
-            <Button variant="ghost" size="icon" onClick={() => ui({ mobileHistoryOpen: true })} aria-label="Abrir histórico" className="relative">
-              <HistoryIcon />
-              {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-                  {count > 99 ? "99+" : count}
-                </span>
-              )}
-            </Button>
-            <LogoMark className="size-7 rounded-lg" />
-          </>
+          <Button variant="ghost" size="icon" onClick={() => ui({ mobileHistoryOpen: true })} aria-label={`Abrir histórico (${count} sons)`} className="relative">
+            <ListMusicIcon />
+            {count > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-foreground px-1 text-[10px] font-semibold text-background tabular">
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
+          </Button>
         )}
-        {isDesktop && sidebarCollapsed && (
-          <span className="hidden text-sm font-semibold tracking-tight lg:inline">Sonora</span>
+        {sidebarHidden && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={startNew} size="sm" className="gap-1.5" aria-label="Novo som">
+                <PlusIcon />
+                <span className="hidden md:inline">Novo som</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Começar um som do zero <Kbd className="ml-1">Alt N</Kbd>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 
       <Stepper />
 
-      <div className="flex flex-1 items-center justify-end gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => ui({ paletteOpen: true })}
-          className="hidden h-8 gap-2 rounded-full pr-1.5 pl-3 text-muted-foreground lg:flex"
-        >
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+        <Button variant="outline" size="sm" onClick={() => ui({ paletteOpen: true })} className="mr-1 hidden h-8 gap-2 pr-1.5 pl-2.5 font-normal text-muted-foreground lg:flex">
           <SearchIcon className="size-3.5" />
-          <span className="text-xs">Buscar e comandos</span>
+          Buscar
           <Kbd>{mod} K</Kbd>
         </Button>
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => ui({ paletteOpen: true })} aria-label="Comandos">
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => ui({ paletteOpen: true })} aria-label="Buscar e comandos">
           <SearchIcon />
         </Button>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => ui({ shortcutsOpen: true })} aria-label="Atalhos">
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => ui({ shortcutsOpen: true })} aria-label="Atalhos de teclado">
               <KeyboardIcon />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            Atalhos <Kbd className="ml-1">?</Kbd>
+            Atalhos de teclado <Kbd className="ml-1">?</Kbd>
           </TooltipContent>
         </Tooltip>
         <ThemeToggle />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={() => ui({ settingsOpen: true })} aria-label="Configurações">
-              <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 300, damping: 15 }} className="grid">
-                <Settings2Icon />
-              </motion.span>
+              <Settings2Icon />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">

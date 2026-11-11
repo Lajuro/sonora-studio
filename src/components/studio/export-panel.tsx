@@ -4,14 +4,17 @@ import { AnimatePresence, motion } from "motion/react"
 import { DownloadIcon, FileAudioIcon, FileCode2Icon, InfoIcon, RadioIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { blobToDataUri, downloadBlob, EXPORT_FORMATS, formatBytes, getFormat, slugify, type ExportFormat, type FormatGroup } from "@/lib/audio/export"
 import { copyText } from "@/lib/helpers"
 import { cn } from "@/lib/utils"
+import { useHistory } from "@/stores/history"
 import { useSettings } from "@/stores/settings"
-import type { CurrentSound } from "@/stores/studio"
+import { useStudio, type CurrentSound } from "@/stores/studio"
+import { useUi } from "@/stores/ui"
 import { CopyMorph, EqBars, MotionButton } from "./fx"
 
 const GROUPS: { id: FormatGroup; label: string; icon: typeof FileAudioIcon }[] = [
@@ -41,12 +44,12 @@ function estimateSize(f: ExportFormat, frames: number, ch: number, duration: num
   }
 }
 
-export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: boolean }) {
+export function ExportPanel({ sound, mixed, name: savedName }: { sound: CurrentSound; mixed: boolean; name?: string }) {
   const defaultFormat = useSettings((s) => s.defaultFormat)
   const setSettings = useSettings((s) => s.set)
   const formats = useMemo(() => EXPORT_FORMATS.filter((f) => f.available()), [])
   const [formatId, setFormatId] = useState(() => (formats.some((f) => f.id === defaultFormat) ? defaultFormat : "wav16"))
-  const [name, setName] = useState(() => slugify(sound.recipe.name))
+  const [name, setName] = useState(() => slugify(savedName ?? sound.recipe.name))
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
   const [copiedUri, setCopiedUri] = useState(false)
@@ -89,40 +92,18 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
   }
 
   return (
-    <div className="rounded-2xl border bg-card/70 p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold">Exportar</h3>
-          <p className="text-xs text-muted-foreground">Escolha o formato e baixe o arquivo</p>
-        </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <MotionButton variant="ghost" size="sm" whileTap={{ scale: 0.95 }} onClick={copyDataUri}>
-              <CopyMorph copied={copiedUri} className="size-3.5 [&_svg]:size-3.5" />
-              Data URI
-            </MotionButton>
-          </TooltipTrigger>
-          <TooltipContent>Copia o WAV em base64 para colar direto no código</TooltipContent>
-        </Tooltip>
-      </div>
-
-      <div className="grid gap-x-4 gap-y-3 lg:grid-cols-[2fr_3fr_1fr]">
+    <div>
+      <div className="space-y-4">
         {GROUPS.map((g) => {
           const list = formats.filter((f) => f.group === g.id)
           if (!list.length) return null
           return (
             <div key={g.id}>
-              <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                <g.icon className="size-3" />
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <g.icon className="size-3.5" />
                 {g.label}
               </p>
-              <div
-                className={cn(
-                  "grid gap-1.5",
-                  g.id === "recipe" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-1" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-2",
-                  g.id === "compressed" && "lg:grid-cols-3",
-                )}
-              >
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                 {list.map((f) => {
                   const active = f.id === formatId
                   const est = estimateSize(f, frames, ch, result.duration, sound.json.length)
@@ -136,14 +117,14 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
                         setSettings({ defaultFormat: f.id })
                       }}
                       className={cn(
-                        "relative flex flex-col items-start rounded-xl border px-3 py-2 text-left transition-colors",
-                        active ? "border-primary/60" : "hover:border-foreground/20 hover:bg-muted/40",
+                        "relative flex flex-col items-start rounded-lg border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                        active ? "border-transparent" : "hover:border-foreground/30",
                       )}
                     >
                       {active && (
                         <motion.span
                           layoutId="format-active"
-                          className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-primary/50"
+                          className="absolute inset-0 rounded-lg bg-primary/15 ring-2 ring-primary"
                           transition={{ type: "spring", stiffness: 500, damping: 36 }}
                         />
                       )}
@@ -159,7 +140,7 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
                         )}
                       </span>
                       <span className="relative line-clamp-1 text-[11px] text-muted-foreground">{f.description}</span>
-                      <span className="relative mt-0.5 font-mono text-[10px] text-muted-foreground/80 tabular">
+                      <span className="relative mt-0.5 text-[11px] text-muted-foreground tabular">
                         {est.exact ? "" : "≈ "}
                         {formatBytes(est.bytes)}
                       </span>
@@ -186,17 +167,17 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
         )}
       </AnimatePresence>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex min-w-0 flex-1 items-center">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value.replace(/[\\/:*?"<>|]+/g, "-"))}
-            className="h-10 pr-16 font-mono text-sm"
+            className="h-10 pr-16 text-sm"
             aria-label="Nome do arquivo"
           />
-          <span className="pointer-events-none absolute right-3 font-mono text-sm text-muted-foreground">.{format.ext}</span>
+          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">.{format.ext}</span>
         </div>
-        <MotionButton whileTap={{ scale: 0.96 }} onClick={doExport} disabled={busy} className="h-10 min-w-36 gap-2 rounded-lg">
+        <MotionButton whileTap={{ scale: 0.96 }} onClick={doExport} disabled={busy} className="h-10 min-w-36 gap-2">
           {busy ? (
             <>
               <EqBars />
@@ -210,6 +191,13 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
           )}
         </MotionButton>
       </div>
+      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>Para usar direto no código, copie o áudio como Data URI (WAV em base64).</span>
+        <MotionButton variant="outline" size="sm" whileTap={{ scale: 0.95 }} onClick={copyDataUri} className="shrink-0">
+          <CopyMorph copied={copiedUri} className="size-3.5 [&_svg]:size-3.5" />
+          Copiar Data URI
+        </MotionButton>
+      </div>
       <AnimatePresence>
         {busy && progress > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2">
@@ -218,5 +206,24 @@ export function ExportPanel({ sound, mixed }: { sound: CurrentSound; mixed: bool
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/** Janela de exportação do som atual, aberta pelo botão Baixar. */
+export function ExportDialog() {
+  const open = useUi((s) => s.exportOpen)
+  const sound = useStudio((s) => s.current)
+  const mixed = useStudio((s) => s.muted.length > 0 || s.solo !== null)
+  const savedName = useHistory((s) => s.items.find((i) => i.id === sound?.id)?.name)
+  return (
+    <Dialog open={open && Boolean(sound)} onOpenChange={(o) => useUi.getState().set({ exportOpen: o })}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Baixar “{savedName ?? sound?.recipe.name}”</DialogTitle>
+          <DialogDescription>O formato escolhido vira o padrão do botão Baixar.</DialogDescription>
+        </DialogHeader>
+        {sound && <ExportPanel key={sound.id} sound={sound} mixed={mixed} name={savedName} />}
+      </DialogContent>
+    </Dialog>
   )
 }

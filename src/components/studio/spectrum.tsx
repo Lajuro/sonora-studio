@@ -17,9 +17,9 @@ export function Spectrum({ active, className }: { active: boolean; className?: s
     if (!c) return
     const ctx = c.getContext("2d")!
     const css = getComputedStyle(document.documentElement)
-    const brand = css.getPropertyValue("--brand").trim()
-    const brand2 = css.getPropertyValue("--brand-2").trim()
-    const muted = css.getPropertyValue("--muted-foreground").trim()
+    const bar = css.getPropertyValue("--primary").trim()
+    const peak = css.getPropertyValue("--deck-foreground").trim()
+    const idle = css.getPropertyValue("--deck-muted").trim()
 
     const levels = new Float32Array(BANDS)
     const peaks = new Float32Array(BANDS)
@@ -64,9 +64,6 @@ export function Spectrum({ active, className }: { active: boolean; className?: s
 
       const gap = 2
       const bw = (w - gap * (BANDS - 1)) / BANDS
-      const grad = ctx.createLinearGradient(0, h, 0, 0)
-      grad.addColorStop(0, brand)
-      grad.addColorStop(1, brand2)
       let energy = 0
       for (let b = 0; b < BANDS; b++) {
         const lv = Math.pow(levels[b], 1.4)
@@ -74,14 +71,14 @@ export function Spectrum({ active, className }: { active: boolean; className?: s
         peaks[b] = Math.max(peaks[b] - 0.012, lv)
         const bh = Math.max(2, lv * (h - 4))
         const x = b * (bw + gap)
-        ctx.fillStyle = live || lv > 0.01 ? grad : muted
-        ctx.globalAlpha = live || lv > 0.01 ? 0.95 : 0.25
+        ctx.fillStyle = live || lv > 0.01 ? bar : idle
+        ctx.globalAlpha = 1
         ctx.beginPath()
         ctx.roundRect(x, h - bh, bw, bh, Math.max(0, Math.min(2, bw / 2)))
         ctx.fill()
         if (peaks[b] > 0.02) {
           ctx.globalAlpha = 0.8
-          ctx.fillStyle = brand2
+          ctx.fillStyle = peak
           ctx.fillRect(x, h - peaks[b] * (h - 4) - 3, bw, 1.5)
         }
       }

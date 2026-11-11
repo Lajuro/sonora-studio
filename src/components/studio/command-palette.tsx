@@ -13,7 +13,7 @@ import {
   PlayIcon,
   SearchIcon,
   Settings2Icon,
-  SparklesIcon,
+  PlusIcon,
   SquareIcon,
   StarIcon,
   SunIcon,
@@ -33,7 +33,15 @@ import { player } from "@/lib/audio/player"
 import { formatDuration, isMac } from "@/lib/helpers"
 import { EXAMPLES, exampleJson } from "@/lib/recipe/examples"
 import { useHistory } from "@/stores/history"
-import { copyPrompt, copyShareLink, generateFromDraft, openHistoryItem, useStudio } from "@/stores/studio"
+import {
+  copyPrompt,
+  copyShareLink,
+  generateFromDraft,
+  loadExample,
+  openHistoryItem,
+  startNew,
+  useStudio,
+} from "@/stores/studio"
 import { commands, useUi } from "@/stores/ui"
 import { MiniWave } from "./mini-wave"
 
@@ -65,15 +73,15 @@ export function CommandPalette() {
         <CommandList className="max-h-[60dvh]">
           <CommandEmpty>Nada encontrado.</CommandEmpty>
           <CommandGroup heading="Ações">
+            <CommandItem onSelect={() => run(startNew)}>
+              <PlusIcon />
+              Novo som
+              <CommandShortcut>Alt N</CommandShortcut>
+            </CommandItem>
             <CommandItem onSelect={() => run(() => void copyPrompt())}>
               <CopyIcon />
               Copiar prompt para a IA
               <CommandShortcut>{mod}⇧C</CommandShortcut>
-            </CommandItem>
-            <CommandItem onSelect={() => go(1)}>
-              <SparklesIcon />
-              Descrever um novo som
-              <CommandShortcut>Alt 1</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => go(2)}>
               <BracesIcon />
@@ -163,8 +171,7 @@ export function CommandPalette() {
                 value={`exemplo ${String(e.recipe.name)} ${e.category}`}
                 onSelect={() =>
                   run(() => {
-                    useStudio.getState().setDraft(exampleJson(e))
-                    useStudio.getState().setStep(2)
+                    loadExample(exampleJson(e), String(e.recipe.name))
                   })
                 }
               >

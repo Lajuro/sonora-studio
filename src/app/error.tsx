@@ -16,9 +16,9 @@ export default function ErrorScreen({ error, retry }: { error: unknown; retry: (
   const message = error instanceof Error ? error.message : String(error)
 
   return (
-    <div className="grid h-dvh place-items-center bg-background bg-glow p-6">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-6 text-center shadow-sm">
-        <p className="font-pixel text-xs tracking-[0.3em] text-muted-foreground uppercase">Sonora</p>
+    <div className="grid h-dvh place-items-center bg-background p-6">
+      <div className="w-full max-w-md rounded-xl border bg-card p-6 text-center shadow-sm">
+        <p className="display text-sm text-muted-foreground">Sonora</p>
         <h1 className="mt-3 text-xl font-semibold tracking-tight">Algo saiu do tom</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           A interface encontrou um erro inesperado. Seu histórico de sons continua salvo neste navegador.

@@ -16,10 +16,20 @@ Para ir e voltar com a IA sem montar nada na mão:
 - **Pedir correção:** se a receita vier com erro, um botão copia o pedido de correção com os erros e a linha de cada um.
 - **Ajustes rápidos:** tom e velocidade mudam direto no player, sem IA. O ajuste fica gravado na receita (`transpose` e `speed`).
 - **Prévia:** no editor, `Alt Enter` toca a receita sem salvar. No menu Exemplos, cada item tem um botão para ouvir.
-- **Variações:** quando a IA devolve várias receitas, elas aparecem como abas no topo do player para comparar.
+- **Vários sons por pedido:** peça de 1 a 4 versões no mesmo pedido e compare lado a lado no player.
 - **Link:** o botão de link copia um endereço com a receita compactada dentro. Quem abrir recebe a receita no editor.
 
-Tudo que você gera fica salvo automaticamente no **histórico** (barra lateral redimensionável), que dá para tocar direto, favoritar, renomear, buscar e baixar.
+## Histórico organizado por pedido
+
+Tudo que você gera fica salvo automaticamente neste navegador. A barra lateral mostra cada **pedido** (o texto que você descreveu ou o ajuste que pediu) com os sons que ele gerou logo abaixo, então dá para ver o que foi criado, quando e a partir de quê.
+
+- **Novo som** fica sempre no topo da barra lateral (`Alt N`).
+- **Busca** procura no nome do som, nas etiquetas e no texto do pedido.
+- **Agrupar por** pedido, data, coleção ou etiqueta, e **ordenar** por data, nome ou duração.
+- **Coleções** juntam sons de pedidos diferentes (por projeto, por exemplo). Crie pelo `+` nos filtros e mova sons pelo menu de cada item.
+- **Favoritos** com a estrela, direto na lista ou nos cartões do player.
+- Quando um pedido gera vários sons, todos aparecem juntos acima do player para comparar com um clique.
+- O menu de cada pedido permite usar o texto de novo, anotar o que foi pedido, baixar os sons em .zip ou excluir tudo de uma vez.
 
 ## Formatos de exportação
 
@@ -125,6 +135,7 @@ A síntese é determinística: a mesma receita sempre gera exatamente o mesmo á
 
 | Ação | Atalho |
 | --- | --- |
+| Novo som | `Alt N` |
 | Buscar e comandos | `Ctrl K` |
 | Mostrar/ocultar histórico | `Ctrl B` |
 | Copiar prompt | `Ctrl Shift C` |
@@ -138,7 +149,7 @@ A síntese é determinística: a mesma receita sempre gera exatamente o mesmo á
 
 ## Onde ficam os dados
 
-Histórico, rascunho e preferências ficam no `localStorage` do navegador. Para levar os sons para outra máquina, use **Exportar backup** no menu do histórico e depois **Importar backup**.
+Histórico, pedidos, coleções, rascunho e preferências ficam no `localStorage` do navegador. Para levar os sons para outra máquina, use **Exportar backup** no menu do histórico e depois **Importar backup**.
 
 ## Estrutura
 

@@ -39,8 +39,9 @@ import { isMac, readClipboard } from "@/lib/helpers"
 import { EXAMPLES, exampleJson, type ExampleCategory } from "@/lib/recipe/examples"
 import { parseRecipeText, prettify, type Diagnostic } from "@/lib/recipe/parse"
 import { cn } from "@/lib/utils"
-import { audition, copyFixPrompt, generateFromDraft, PREVIEW_KEY, useStudio } from "@/stores/studio"
+import { audition, copyFixPrompt, generateFromDraft, loadExample, PREVIEW_KEY, setRequestText, useStudio } from "@/stores/studio"
 import { EqBars, MotionButton } from "./fx"
+import { KIND_ICON } from "./history-sidebar"
 import { RecipeEditor, type RecipeEditorHandle } from "./recipe-editor"
 import { DiagnosticList, RecipePreview } from "./recipe-preview"
 
@@ -49,6 +50,41 @@ const CATEGORY_ICON: Record<ExampleCategory, typeof MusicIcon> = {
   Jogos: Gamepad2Icon,
   Música: MusicIcon,
   Ambiente: TreesIcon,
+}
+
+/** O pedido que vai acompanhar esta geração no histórico. */
+function RequestField() {
+  const request = useStudio((s) => s.request)
+  const Icon = KIND_ICON[request?.kind ?? "manual"]
+  const prefix =
+    request?.kind === "ajuste"
+      ? `Ajuste${request.parentName ? ` de ${request.parentName}` : ""}`
+      : request?.kind === "edicao"
+        ? `Edição${request.parentName ? ` de ${request.parentName}` : ""}`
+        : request?.kind === "exemplo"
+          ? "Exemplo"
+          : request?.kind === "link"
+            ? "Recebido por link"
+            : null
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <label className="flex items-center gap-2 border-b bg-muted/40 px-3 py-2 text-[13px]">
+          <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="shrink-0 text-muted-foreground">{prefix ?? "Pedido"}</span>
+          <input
+            value={request?.text ?? ""}
+            onChange={(e) => setRequestText(e.target.value)}
+            placeholder="o que você pediu à IA (opcional, fica no histórico)"
+            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground/70"
+          />
+        </label>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="start">
+        Este texto aparece no histórico junto dos sons gerados
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 function ExamplesMenu({ onPick }: { onPick: (json: string, name: string) => void }) {
@@ -98,7 +134,7 @@ function ExamplesMenu({ onPick }: { onPick: (json: string, name: string) => void
                         void audition(key, exampleJson(e))
                       }}
                       className={cn(
-                        "grid size-7 shrink-0 place-items-center rounded-full border transition-colors hover:border-primary/60 hover:text-primary",
+                        "grid size-7 shrink-0 place-items-center rounded-full border transition-colors hover:border-primary/60 hover:text-brand",
                         isPlaying && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
                       )}
                     >
@@ -194,7 +230,7 @@ export function StepRecipe() {
       {/* Editor */}
       <div
         className={cn(
-          "relative flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card/80 shadow-sm backdrop-blur-sm transition-colors",
+          "relative flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card transition-colors",
           dragging && "border-primary",
         )}
         onDragOver={(e) => {
@@ -212,6 +248,7 @@ export function StepRecipe() {
           void onFile(e.dataTransfer.files[0])
         }}
       >
+        <RequestField />
         <div className="flex items-center gap-1 border-b px-2 py-1.5">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -241,7 +278,12 @@ export function StepRecipe() {
               e.target.value = ""
             }}
           />
-          <ExamplesMenu onPick={(json, name) => loadText(json, `Exemplo “${name}” carregado`)} />
+          <ExamplesMenu
+            onPick={(json, name) => {
+              loadExample(json, name)
+              toast.success(`Exemplo “${name}” carregado`)
+            }}
+          />
           <div className="mx-1 h-4 w-px bg-border" />
           <Tooltip>
             <TooltipTrigger asChild>
@@ -277,7 +319,7 @@ export function StepRecipe() {
                   size="sm"
                   disabled={!valid}
                   onClick={preview}
-                  className={cn(previewPlaying && "text-primary")}
+                  className={cn(previewPlaying && "text-brand")}
                 >
                   {previewPlaying || previewLoading ? <EqBars className="h-3" bars={3} /> : <HeadphonesIcon />}
                   <span className="hidden sm:inline">{previewPlaying ? "Parar" : "Prévia"}</span>
@@ -302,7 +344,15 @@ export function StepRecipe() {
             onSubmit={submit}
             onPreview={preview}
             onCursor={(line, col) => setCursor({ line, col })}
-            onCleanPaste={() => toast.success("Resposta da IA limpa", { description: "Extraí só o JSON e formatei para você." })}
+            isPristine={() => {
+              const st = useStudio.getState()
+              return st.pristine !== null && st.pristine === st.draft
+            }}
+            onCleanPaste={(kind) =>
+              kind === "substituida"
+                ? toast.success("Receita nova no editor", { description: "A receita anterior foi substituída pela que você colou." })
+                : toast.success("Resposta da IA limpa", { description: "Ficou só o JSON, já formatado." })
+            }
           />
           <AnimatePresence>
             {dragging && (
@@ -310,9 +360,9 @@ export function StepRecipe() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm"
+                className="absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-primary bg-primary/10"
               >
-                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-2 text-primary">
+                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-2 text-brand">
                   <UploadIcon className="size-8" />
                   <span className="font-medium">Solte o arquivo .json</span>
                 </motion.div>
@@ -408,14 +458,12 @@ function GenerateButton({
       onClick={onClick}
       disabled={generating}
       whileTap={{ scale: 0.96 }}
-      whileHover={valid ? { y: -1 } : undefined}
-      className={cn(
+            className={cn(
         "relative gap-2 overflow-hidden",
-        !compact && "h-12 w-full rounded-xl text-base shadow-[0_10px_30px_-10px_var(--primary)]",
+        !compact && "h-12 w-full text-base",
         !valid && !generating && "opacity-60",
       )}
     >
-      {valid && !generating && <span className="pointer-events-none absolute inset-0 shine animate-shimmer opacity-30" />}
       {generating ? (
         <>
           <EqBars />

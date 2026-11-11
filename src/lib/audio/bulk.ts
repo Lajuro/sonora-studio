@@ -3,7 +3,7 @@
 import { zipSync } from "fflate"
 import { toast } from "sonner"
 import { downloadBlob, getFormat, slugify } from "@/lib/audio/export"
-import type { HistoryItem } from "@/stores/history"
+import { useHistory, type Backup, type HistoryItem } from "@/stores/history"
 import { getRenderForItem } from "@/stores/studio"
 
 export async function quickExport(item: HistoryItem, formatId: string) {
@@ -26,7 +26,7 @@ export async function quickExport(item: HistoryItem, formatId: string) {
 }
 
 /** Baixa todo o histórico num .zip com áudio + receita de cada som. */
-export async function exportAllZip(items: HistoryItem[], formatId = "wav16") {
+export async function exportAllZip(items: HistoryItem[], formatId = "wav16", label = "sonora") {
   if (!items.length) return
   const format = getFormat(formatId) ?? getFormat("wav16")!
   const id = toast.loading(`Empacotando 0 de ${items.length}…`)
@@ -51,23 +51,25 @@ export async function exportAllZip(items: HistoryItem[], formatId = "wav16") {
     }
     const zipped = zipSync(files, { level: 0 })
     const stamp = new Date().toISOString().slice(0, 10)
-    downloadBlob(new Blob([zipped as Uint8Array<ArrayBuffer>], { type: "application/zip" }), `sonora-${stamp}.zip`)
-    toast.success(`${items.length} sons exportados`, { id, description: `sonora-${stamp}.zip` })
+    const filename = `${slugify(label)}-${stamp}.zip`
+    downloadBlob(new Blob([zipped as Uint8Array<ArrayBuffer>], { type: "application/zip" }), filename)
+    toast.success(`${items.length} ${items.length === 1 ? "som exportado" : "sons exportados"}`, { id, description: filename })
   } catch (err) {
     toast.error("Falha ao gerar o .zip", { id, description: err instanceof Error ? err.message : String(err) })
   }
 }
 
-export function exportBackup(items: HistoryItem[]) {
-  const data = JSON.stringify({ app: "sonora", version: 1, exportedAt: new Date().toISOString(), items }, null, 2)
+export function exportBackup() {
+  const { items, generations, collections } = useHistory.getState()
+  const data = JSON.stringify({ app: "sonora", version: 2, exportedAt: new Date().toISOString(), items, generations, collections }, null, 2)
   const stamp = new Date().toISOString().slice(0, 10)
   downloadBlob(new Blob([data], { type: "application/json" }), `sonora-historico-${stamp}.json`)
   toast.success("Backup do histórico salvo", { description: `${items.length} sons` })
 }
 
-export async function readBackup(file: File): Promise<HistoryItem[]> {
+export async function readBackup(file: File): Promise<Backup> {
   const parsed = JSON.parse(await file.text())
   const items = Array.isArray(parsed) ? parsed : parsed?.items
   if (!Array.isArray(items)) throw new Error("Arquivo não parece ser um backup do Sonora")
-  return items as HistoryItem[]
+  return { items, generations: parsed?.generations, collections: parsed?.collections }
 }

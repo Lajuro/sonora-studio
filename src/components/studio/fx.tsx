@@ -57,7 +57,7 @@ export function EqBars({ className, bars = 4, active = true }: { className?: str
 }
 
 /** Explosão de partículas para confirmar ações (ex.: favoritar, copiar). */
-export function Burst({ trigger, color = "var(--brand)" }: { trigger: number; color?: string }) {
+export function Burst({ trigger, color = "var(--primary)" }: { trigger: number; color?: string }) {
   return (
     <AnimatePresence>
       {trigger > 0 && (

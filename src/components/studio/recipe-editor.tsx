@@ -24,7 +24,7 @@ const editorTheme = EditorView.theme({
     lineHeight: "1.65",
     scrollbarWidth: "thin",
   },
-  ".cm-content": { caretColor: "var(--brand)", padding: "14px 0" },
+  ".cm-content": { caretColor: "var(--primary)", padding: "14px 0" },
   ".cm-line": { padding: "0 16px 0 6px" },
   ".cm-gutters": {
     backgroundColor: "transparent",
@@ -35,13 +35,13 @@ const editorTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { minWidth: "28px" },
   ".cm-activeLine": { backgroundColor: "color-mix(in oklch, var(--foreground) 4%, transparent)" },
   ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--foreground)" },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--brand)", borderLeftWidth: "2px" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--primary)", borderLeftWidth: "2px" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-    backgroundColor: "color-mix(in oklch, var(--brand) 28%, transparent) !important",
+    backgroundColor: "color-mix(in oklch, var(--primary) 30%, transparent) !important",
   },
   ".cm-matchingBracket": {
-    backgroundColor: "color-mix(in oklch, var(--brand) 22%, transparent)",
-    outline: "1px solid color-mix(in oklch, var(--brand) 50%, transparent)",
+    backgroundColor: "color-mix(in oklch, var(--primary) 22%, transparent)",
+    outline: "1px solid color-mix(in oklch, var(--primary) 50%, transparent)",
     borderRadius: "2px",
   },
   ".cm-foldGutter .cm-gutterElement": { color: "var(--muted-foreground)", cursor: "pointer" },
@@ -57,12 +57,12 @@ const editorTheme = EditorView.theme({
     backgroundColor: "var(--popover)",
     color: "var(--popover-foreground)",
     border: "1px solid var(--border)",
-    borderRadius: "10px",
+    borderRadius: "8px",
     boxShadow: "0 12px 32px -12px rgb(0 0 0 / 0.35)",
     overflow: "hidden",
   },
   ".cm-tooltip-lint": { padding: "2px" },
-  ".cm-diagnostic": { padding: "6px 10px", fontFamily: "var(--font-geist-sans), sans-serif", fontSize: "12.5px" },
+  ".cm-diagnostic": { padding: "6px 10px", fontFamily: "inherit", fontSize: "12.5px" },
   ".cm-diagnostic-error": { borderLeft: "3px solid var(--destructive)" },
   ".cm-diagnostic-warning": { borderLeft: "3px solid var(--warning)" },
   ".cm-lintRange-error": {
@@ -83,13 +83,13 @@ const editorTheme = EditorView.theme({
   ".cm-tooltip-autocomplete > ul": { fontFamily: "var(--font-geist-mono), monospace", fontSize: "12.5px", maxHeight: "16em" },
   ".cm-tooltip-autocomplete > ul > li": { padding: "3px 8px !important", borderRadius: "6px", lineHeight: "1.5" },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-    backgroundColor: "color-mix(in oklch, var(--brand) 18%, transparent)",
+    backgroundColor: "color-mix(in oklch, var(--primary) 20%, transparent)",
     color: "var(--foreground)",
   },
   ".cm-completionDetail": {
     marginLeft: "12px",
     fontStyle: "normal",
-    fontFamily: "var(--font-geist-sans), sans-serif",
+    fontFamily: "inherit",
     fontSize: "11.5px",
     color: "var(--muted-foreground)",
   },
@@ -98,9 +98,9 @@ const editorTheme = EditorView.theme({
 })
 
 const highlight = HighlightStyle.define([
-  { tag: t.propertyName, color: "var(--brand)" },
-  { tag: t.string, color: "var(--type-pluck)" },
-  { tag: t.number, color: "var(--type-fm)" },
+  { tag: t.propertyName, color: "var(--foreground)" },
+  { tag: t.string, color: "var(--success)" },
+  { tag: t.number, color: "var(--brand)" },
   { tag: [t.bool, t.null], color: "var(--type-drum)", fontWeight: "500" },
   { tag: [t.punctuation, t.bracket, t.separator], color: "color-mix(in oklch, var(--foreground) 55%, transparent)" },
   { tag: t.comment, color: "var(--muted-foreground)", fontStyle: "italic" },
@@ -118,11 +118,14 @@ type Props = {
   onSubmit: () => void
   onPreview?: () => void
   onCursor?: (line: number, col: number) => void
-  onCleanPaste?: () => void
+  /** avisa quando a colagem foi tratada: resposta da IA limpa ou receita antiga substituída */
+  onCleanPaste?: (kind: "limpa" | "substituida") => void
+  /** o conteúdo atual é uma receita já gerada/carregada e ainda não editada? */
+  isPristine?: () => boolean
 }
 
 export const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(function RecipeEditor(
-  { value, onChange, diagnostics, onSubmit, onPreview, onCursor, onCleanPaste },
+  { value, onChange, diagnostics, onSubmit, onPreview, onCursor, onCleanPaste, isPristine },
   ref,
 ) {
   const cm = useRef<ReactCodeMirrorRef>(null)
@@ -130,11 +133,13 @@ export const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(function Recip
   const submitRef = useRef(onSubmit)
   const cleanRef = useRef(onCleanPaste)
   const previewRef = useRef(onPreview)
+  const pristineRef = useRef(isPristine)
   useEffect(() => {
+    pristineRef.current = isPristine
     submitRef.current = onSubmit
     cleanRef.current = onCleanPaste
     previewRef.current = onPreview
-  }, [onSubmit, onCleanPaste, onPreview])
+  }, [onSubmit, onCleanPaste, onPreview, isPristine])
 
   useImperativeHandle(ref, () => ({
     jumpTo: (from, to) => {
@@ -179,17 +184,19 @@ export const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(function Recip
         paste: (event, view) => {
           const text = event.clipboardData?.getData("text/plain")
           if (!text) return false
-          // Se o editor está vazio (ou tudo selecionado), limpa a resposta da IA automaticamente
           const sel = view.state.selection.main
           const replacingAll = view.state.doc.length === 0 || (sel.from === 0 && sel.to === view.state.doc.length)
-          if (!replacingAll) return false
+          // Editor ainda com a receita antiga, sem edições: uma receita inteira colada substitui tudo
+          const replacingStale = !replacingAll && Boolean(pristineRef.current?.()) && /"(layers|camadas|tracks)"\s*:/.test(text)
+          if (!replacingAll && !replacingStale) return false
+          // Limpa a resposta da IA: tira o texto em volta e formata
           const { json: extracted } = extractJson(text)
-          const pretty = prettify(extracted)
-          const cleaned = pretty ?? extracted
-          if (cleaned.trim() === text.trim()) return false
+          const cleaned = prettify(extracted) ?? extracted
+          const changed = cleaned.trim() !== text.trim()
+          if (!changed && !replacingStale) return false
           event.preventDefault()
           view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: cleaned }, selection: { anchor: 0 } })
-          cleanRef.current?.()
+          cleanRef.current?.(replacingStale ? "substituida" : "limpa")
           return true
         },
       }),
