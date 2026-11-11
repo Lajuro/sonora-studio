@@ -1,0 +1,39 @@
+# Mantém os scripts de cópia sem git (scripts/baixar-sonora.sh e
+# scripts/sonora-offline.sh) sincronizados com o conteúdo da main.
+name: Atualizar scripts de cópia
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - scripts/baixar-sonora.sh
+      - scripts/sonora-offline.sh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scripts-de-copia
+  cancel-in-progress: true
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Gerar scripts
+        run: bash scripts/gerar-scripts-de-copia.sh
+
+      - name: Publicar se mudou
+        run: |
+          if git diff --quiet; then
+            echo "Scripts já estavam em dia."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: atualiza scripts de cópia sem git"
+          git push

@@ -50,6 +50,28 @@ SONORA_BASE_PATH=/sonora npm run build
 
 O app funciona também em `http://` (sem HTTPS). Nesse caso o navegador não libera a leitura da área de transferência, então o botão **Colar** pede para usar `Ctrl+V` no editor. Copiar continua funcionando.
 
+## Baixar sem git clone
+
+Se a rede da empresa bloqueia o `git clone`, mas o GitHub abre no navegador:
+
+1. Abra [`scripts/baixar-sonora.sh`](scripts/baixar-sonora.sh) no GitHub, clique no botão de copiar o conteúdo (Copy raw file) e salve num arquivo `baixar-sonora.sh`.
+2. No terminal (no Windows, use o Git Bash), rode `bash baixar-sonora.sh`.
+
+O script tenta três caminhos até um funcionar: o pacote `.tar.gz`/`.zip` do repositório, a API do GitHub e, por último, uma lista de arquivos embutida nele mesmo, baixando arquivo por arquivo. Nos dois últimos ele confere o hash do git de cada arquivo, então a cópia fica idêntica ao repositório.
+
+| Opção | O que faz |
+| --- | --- |
+| `bash baixar-sonora.sh minha-pasta` | escolhe a pasta de destino (padrão: `sonora-studio`) |
+| `--git` | cria um repositório git local com um commit da cópia |
+| `--instalar` | roda `npm install` no final |
+| `--inseguro` | ignora erro de certificado (proxy que intercepta HTTPS) |
+| `--metodo zip\|api\|lista` | força um caminho específico |
+| `--ref <branch\|tag\|commit>` | baixa outra versão |
+
+Se nenhum endereço do GitHub estiver liberado, use [`scripts/sonora-offline.sh`](scripts/sonora-offline.sh) do mesmo jeito: ele traz o projeto inteiro embutido (cerca de 280 KB de texto) e não precisa de rede.
+
+Os dois scripts são atualizados sozinhos pelo workflow `.github/workflows/scripts-de-copia.yml` a cada push na `main`.
+
 ## A receita
 
 A receita descreve camadas que tocam juntas. Cada camada tem um tipo, tempo de início, duração, volume, envelope, filtros, LFOs, efeitos e repetições.
@@ -118,6 +140,8 @@ src/
   lib/audio/encoders/     WAV, AIFF, FLAC e MP3
   stores/                 estado (zustand) do estúdio, histórico e preferências
 scripts/check.ts          verificação rápida dos exemplos e codificadores
+scripts/baixar-sonora.sh  cópia do repositório sem git clone
+scripts/sonora-offline.sh instalador com o projeto embutido (gerado)
 ```
 
 Stack: Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Motion, CodeMirror 6, Zustand e Zod.
